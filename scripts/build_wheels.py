@@ -203,11 +203,19 @@ def build_wheels_main() -> None:
         + "These are set in ITKRemoteModuleBuildTestPackageAction:itk-module-deps github actions."
         + "and were historically set as an environment variable ITK_MODULE_PREQ.",
     )
+
     parser.add_argument(
         "--build-itk-tarball-cache",
         dest="build_itk_tarball_cache",
         action="store_true",
+        default=False,
         help="Build an uploadable tarball.  The tarball can be used as a cache for remote module builds.",
+    )
+    parser.add_argument(
+        "--no-build-itk-tarball-cache",
+        dest="build_itk_tarball_cache",
+        action="store_false",
+        help="Do not build an uploadable tarball.  The tarball can be used as a cache for remote module builds.",
     )
 
     # set the default build_dir_root to a very short path on windows to avoid path too long errors
