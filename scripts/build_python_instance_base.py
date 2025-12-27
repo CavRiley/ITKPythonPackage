@@ -57,15 +57,9 @@ class BuildPythonInstanceBase(ABC):
 
         self.package_env_config = package_env_config
 
-        cmd = ["pixi", "run", "-e", self.platform_env, "which", "python3"]
-        result: subprocess.CompletedProcess = run_commandLine_subprocess(
-            cmd=cmd, cwd=self.ipp_dir
+        self.python_executable: Path = Path(
+            self.package_env_config["PYTHON_EXECUTABLE"]
         )
-        if result.returncode != 0:
-            raise ValueError(
-                f"Failed to find python3 executable for platform_env {platform_env}"
-            )
-        self.python_executable: Path = Path(result.stdout.strip())
 
         with open(
             IPP_BuildWheelsSupport_DIR / "WHEEL_NAMES.txt",
@@ -390,7 +384,7 @@ class BuildPythonInstanceBase(ABC):
         self,
         venv_dir: Path,
     ) -> tuple[str, str, str, str, str, Path]:
-        python_executable = venv_dir / "bin" / "python3"
+        python_executable = venv_dir / "bin" / "python"
         if not python_executable.exists():
             raise FileNotFoundError(f"Python executable not found: {python_executable}")
 

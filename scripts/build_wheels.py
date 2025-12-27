@@ -464,6 +464,9 @@ def build_wheels_main() -> None:
     package_env_config["CMAKE_EXECUTABLE"] = _which("cmake")
     package_env_config["NINJA_EXECUTABLE"] = _which("ninja")
     package_env_config["DOXYGEN_EXECUTABLE"] = _which("doxygen")
+    package_env_config["GIT_EXECUTABLE"] = _which("git")
+
+    package_env_config["PYTHON_EXECUTABLE"] = _which("python")
 
     oci_exe = resolve_oci_exe(os.environ.copy())
     package_env_config["OCI_EXE"] = oci_exe
