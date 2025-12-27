@@ -37,14 +37,14 @@ def remotemodulebuildandtestaction() -> dict[str, str]:
     }
     default_values: dict[str, str] = {
         "ITK_PACKAGE_VERSION": "auto",  #
-        "ITKPYTHONPACKAGE_TAG": "auto",  #
+        "ITKPYTHONPACKAGE_TAG": "HEAD",  #
         "ITKPYTHONPACKAGE_ORG": "InsightSoftwareConsortium",  #
         "ITK_MODULE_PREQ": "",  #
         "CMAKE_OPTIONS": "",  #
         "MANYLINUX_PLATFORM": "",  # --- No longer used, computed internally
         "MANYLINUX_VERSION": "",  #
         "TARGET_ARCH": "",  # --- No longer used, computed internally
-        "MACOSX_DEPLOYMENT_TARGET": "10.7",  # 10.7 is very outdated, but provides backward compatibility
+        "MACOSX_DEPLOYMENT_TARGET": "10.7", # 10.7 is very outdated but provides backward compatibility
     }
     remote_module_build_dict: dict[str, str] = {}
     for key in itk_remote_module_build_test_package_action_env_mapping.keys():

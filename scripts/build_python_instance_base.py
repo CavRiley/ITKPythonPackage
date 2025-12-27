@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 import shutil
 import subprocess
 from pathlib import Path
+from typing import OrderedDict
+
 from cmake_argument_builder import CMakeArgumentBuilder
 
 from BuildManager import BuildManager
@@ -204,17 +206,21 @@ class BuildPythonInstanceBase(ABC):
         if self.itk_module_deps:
             self._build_module_dependencies()
 
-        python_package_build_steps: dict = {
+        python_package_build_steps: OrderedDict = OrderedDict({
             "01_superbuild_support_components": self.build_superbuild_support_components,
             "02_build_wrapped_itk_cplusplus": self.build_wrapped_itk_cplusplus,
             "03_build_wheels": self.build_itk_python_wheels,
             "04_post_build_fixup": self.post_build_fixup,
             "05_final_import_test": self.final_import_test,
-        }
+        })
         if self.module_source_dir is not None:
             python_package_build_steps[
                 f"06_build_external_module_wheel_{self.module_source_dir.name}"
             ] = self.build_external_module_python_wheel
+        else:
+            python_package_build_steps[
+                f"06_build_external_module_wheel_skipped"
+            ] = lambda: None
         if self.build_itk_tarball_cache:
             python_package_build_steps[
                 f"07_build_itk_tarball_cache_{self.package_env_config['OS_NAME']}_{self.package_env_config['ARCH']}"
