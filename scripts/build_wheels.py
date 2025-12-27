@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import (
     annotations,
 )  # Needed for python 3.9 to support python 3.10 style typehints
@@ -44,7 +44,7 @@ def remotemodulebuildandtestaction() -> dict[str, str]:
         "MANYLINUX_PLATFORM": "",  # --- No longer used, computed internally
         "MANYLINUX_VERSION": "",  #
         "TARGET_ARCH": "",  # --- No longer used, computed internally
-        "MACOSX_DEPLOYMENT_TARGET": "10.7", # 10.7 is very outdated, but provides backward compatibility
+        "MACOSX_DEPLOYMENT_TARGET": "10.7",  # 10.7 is very outdated, but provides backward compatibility
     }
     remote_module_build_dict: dict[str, str] = {}
     for key in itk_remote_module_build_test_package_action_env_mapping.keys():
@@ -91,7 +91,15 @@ def get_effective_command_line(
 ) -> str:
     """Reconstruct the command line from the parser and its parsed arguments."""
     pixi_executable: str = os.environ.get("PIXI_EXE", "pixi")
-    effective_command = [pixi_executable, "run", "-e", args.platform_env, "--", sys.executable, sys.argv[0]]
+    effective_command = [
+        pixi_executable,
+        "run",
+        "-e",
+        args.platform_env,
+        "--",
+        sys.executable,
+        sys.argv[0],
+    ]
     for action in parser._actions:
         if isinstance(action, argparse._HelpAction):
             continue
@@ -339,7 +347,6 @@ def build_wheels_main() -> None:
          """,
     )
 
-
     args = parser.parse_args()
 
     # Historical dist_dir name for compatibility with ITKRemoteModuleBuildTestPackageAction
@@ -424,7 +431,11 @@ def build_wheels_main() -> None:
             env=os.environ.copy(),
         )
 
-    if args.itk_package_version == "auto" or args.itk_package_version is None or len(args.itk_package_version) == 0:
+    if (
+        args.itk_package_version == "auto"
+        or args.itk_package_version is None
+        or len(args.itk_package_version) == 0
+    ):
         args.itk_package_version: str = os.environ.get(
             "ITK_PACKAGE_VERSION",
             compute_itk_package_version(
