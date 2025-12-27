@@ -310,14 +310,15 @@ def build_wheels_main() -> None:
              """,
     )
 
-    parser.add_argument(
-        "--macos-deployment-target",
-        type=str,
-        default=remote_module_build_dict["MACOSX_DEPLOYMENT_TARGET"],
-        help="""
-        The MacOSX deployment target to use for building wheels.
-         """,
-    )
+    if os_name == "darwin":
+        parser.add_argument(
+            "--macos-deployment-target",
+            type=str,
+            default=remote_module_build_dict["MACOSX_DEPLOYMENT_TARGET"],
+            help="""
+            The MacOSX deployment target to use for building wheels.
+             """,
+        )
 
     parser.add_argument(
         "--use-sudo",
@@ -444,7 +445,10 @@ def build_wheels_main() -> None:
     package_env_config["ITK_PACKAGE_VERSION"] = args.itk_package_version
     package_env_config["ITKPYTHONPACKAGE_ORG"] = args.itk_pythonpackage_org
     package_env_config["ITKPYTHONPACKAGE_TAG"] = args.itk_pythonpackage_tag
-    package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macos_deployment_target
+    if os_name == "darwin":
+        package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macos_deployment_target
+    else:
+        package_env_config["MACOSX_DEPLOYMENT_TARGET"] = "RELAVANT_FOR_MACOS_ONLY"
     package_env_config["ITK_MODULE_PREQ"] = args.itk_module_deps
     package_env_config["NO_SUDO"] = no_sudo
     package_env_config["ITK_MODULE_NO_CLEANUP"] = module_no_cleanup
