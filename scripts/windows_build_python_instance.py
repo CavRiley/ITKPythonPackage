@@ -255,7 +255,7 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
             self.package_env_config["PYTHON_EXECUTABLE"]
         ).parent.parent
         venv_base_dir: Path = primary_python_base_dir
-        venv_bin_path = self.package_env_config["PYTHON_EXECUTABLE"].parent
+        venv_bin_path: Path = Path(self.package_env_config["PYTHON_EXECUTABLE"]).parent
 
         python_include_dir = primary_python_base_dir / "include"
         python_major, python_minor = get_python_version(self.platform_env)
