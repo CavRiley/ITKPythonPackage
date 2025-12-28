@@ -281,10 +281,10 @@ class BuildPythonInstanceBase(ABC):
             [
                 "cmake",
                 "--build",
-                "--load-average",
-                str(self.build_node_cpu_count),
-                "--parallel",
-                str(self.build_node_cpu_count),
+                # "--load-average",
+                # str(self.build_node_cpu_count),
+                # "--parallel",
+                # str(self.build_node_cpu_count),
                 str(self.package_env_config["IPP_SUPERBUILD_BINARY_DIR"]),
             ],
         )
