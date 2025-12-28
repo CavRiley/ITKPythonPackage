@@ -70,7 +70,6 @@ class BuildPythonInstanceBase(ABC):
         self.cleanup = cleanup
         self.build_itk_tarball_cache = build_itk_tarball_cache
         self.cmake_options = cmake_options
-        # NEVER CLEANUP FOR DEBUGGING cleanup
         self.windows_extra_lib_paths = windows_extra_lib_paths
         self.dist_dir = dist_dir
         # Needed for processing remote modules and their dependencies
@@ -274,12 +273,12 @@ class BuildPythonInstanceBase(ABC):
         self.echo_check_call(cmd)
         self.echo_check_call(
             [
-                # self.package_env_config["NINJA_EXECUTABLE"],
-                # f"-j{self.build_node_cpu_count}",
-                # f"-l{self.build_node_cpu_count}",
-                # "-C",
                 "cmake",
                 "--build",
+                "--load-average",
+                str(self.build_node_cpu_count),
+                "--parallel",
+                str(self.build_node_cpu_count),
                 str(self.package_env_config["IPP_SUPERBUILD_BINARY_DIR"]),
             ],
         )
@@ -759,18 +758,18 @@ class BuildPythonInstanceBase(ABC):
                 )
 
             if (dependant_module_clone_dir / "setup.py").exists():
-                print(
+                msg: str = (
                     f"Old sci-kit-build with setup.py is no longer supported for {dependant_module_clone_dir} at {tag}"
                 )
-                sys.exit(1)
+                raise RuntimeError(msg)
 
-            # Clonen the current build environment, and modify for current module
-            dependannt_module_build_setup = self.clone()
-            dependannt_module_build_setup.module_source_dir = Path(
+            # Clone the current build environment and modify for the current module
+            dependent_module_build_setup = self.clone()
+            dependent_module_build_setup.module_source_dir = Path(
                 dependant_module_clone_dir
             )
-            dependannt_module_build_setup.itk_module_deps = None  # Prevent recursion
-            dependannt_module_build_setup.run()
+            dependent_module_build_setup.itk_module_deps = None  # Prevent recursion
+            dependent_module_build_setup.run()
 
             # After building dependency, copy includes and wrapping files
             # 1) Top-level include/* -> include/

@@ -359,25 +359,6 @@ def build_wheels_main() -> None:
         str(_ipp_dir_path / ".pixi" / "bin") + os.pathsep + os.environ.get("PATH", "")
     )
     pixi_exec_path: Path = _which("pixi" + binary_ext)
-    # pixi_bin_path: Path = pixi_exec_path.parent
-    # Required executables (paths recorded)
-    # platform_pixi_packages = ["doxygen", "ninja", "cmake", "git"]
-    # if os_name == "linux":
-    #     platform_pixi_packages += ["patchelf"]
-    #
-    # missing_packages: list[str] = []
-    # for ppp in platform_pixi_packages:
-    #     # Search for binaries  herefull_path: Path = pixi_exec_path / (ppp + binary_ext)
-    #     if not full_path.is_file():
-    #         missing_packages.append(ppp)
-    # if len(missing_packages) > 0:
-    #   print diagnostic messaging and exit
-
-    # NOT NEEDED
-    # ipp_latest_tag: str = get_git_id(
-    #     _ipp_dir_path, pixi_exec_path, os.environ, os.environ.get("ITKPYTHONPACKAGE_TAG", "v0.0.0")
-    # )
-
     package_env_config: dict[str, str | Path | None] = {}
 
     args.build_dir_root = Path(args.build_dir_root)
@@ -521,10 +502,10 @@ def build_wheels_main() -> None:
             # Native builds without dockercross need a separate dist dir to avoid conflicts with manylinux
             # dist_dir = IPP_SOURCE_DIR / f"{platform}_dist"
             if os.environ.get("CROSS_TRIPLE", None) is None:
-                print(
+                msg: str = (
                     f"ERROR: MANYLINUX_VERSION={manylinux_version} but not building in dockcross."
                 )
-                sys.exit(1)
+                raise RuntimeError(msg)
 
         builder_cls = LinuxBuildPythonInstance
     else:

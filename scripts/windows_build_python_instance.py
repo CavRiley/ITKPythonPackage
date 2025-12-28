@@ -257,7 +257,6 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         venv_base_dir: Path = primary_python_base_dir
         venv_bin_path = self.package_env_config["PYTHON_EXECUTABLE"].parent
 
-        python_executable = self.package_env_config["PYTHON_EXECUTABLE"]
         python_include_dir = primary_python_base_dir / "include"
         python_major, python_minor = get_python_version(self.platform_env)
         if python_minor >= 11:
@@ -266,8 +265,8 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
                 primary_python_base_dir / "libs" / f"python{python_major}.lib"
             )
         else:
-            # XXX It should be possible to query skbuild for the library dir associated
-            #     with a given interpreter.
+            # It should be possible to query skbuild for the library dir associated
+            # with a given interpreter.
             xy_lib_ver = f"{python_major}{python_minor}"
             python_library = (
                 primary_python_base_dir / "libs" / f"python{xy_lib_ver}.lib"
