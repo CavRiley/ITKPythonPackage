@@ -133,9 +133,7 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         lib_paths = lib_paths + ";" if lib_paths else ""
         print(f"Library paths for fixup: {lib_paths}")
 
-        delve_wheel = (
-            self.venv_info_dict["python_root_dir"] / "Scripts" / "delvewheel.exe"
-        )
+        delve_wheel = "delvewheel.exe"
         cmd = [
             str(delve_wheel),
             "repair",

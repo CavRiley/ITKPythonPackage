@@ -98,12 +98,14 @@ c-compiler = "==1.10.0"    # XCode 16.0 before castxml required updates
 
 [feature.windows-build]
 platforms = ["win-64"]
+
 [feature.windows-build.dependencies]
 git = "*"                 # Git is not always available in PowerShell by default
 cxx-compiler = "==1.11.0" # MSVC 2022
 c-compiler = "==1.11.0"   # MSVC 2022
 
 [feature.windows-build.pypi-dependencies]
+delvewheel = "*"
 # windows = "*"
 
 [feature.py39]
