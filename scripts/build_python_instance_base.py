@@ -57,10 +57,6 @@ class BuildPythonInstanceBase(ABC):
 
         self.package_env_config = package_env_config
 
-        self.python_executable: Path = Path(
-            self.package_env_config["PYTHON_EXECUTABLE"]
-        )
-
         with open(
             IPP_BuildWheelsSupport_DIR / "WHEEL_NAMES.txt",
             "r",
@@ -176,7 +172,7 @@ class BuildPythonInstanceBase(ABC):
         # TODO: Make this better later currently needs to be called after each platforms update of venv_info_dict
         # self.cmake_itk_source_build_configurations.set(
         #     "Python3_EXECUTABLE:FILEPATH",
-        #     f"{self.venv_info_dict['python_executable']}",
+        #     f"{self.package_env_config["PYTHON_EXECUTABLE"]}",
         # )
         # if self.venv_info_dict["python_include_dir"]:
         # self.cmake_itk_source_build_configurations.set(
@@ -297,7 +293,7 @@ class BuildPythonInstanceBase(ABC):
     def final_wheel_import_test(self, installed_dist_dir: Path):
         self.echo_check_call(
             [
-                self.python_executable,
+                self.package_env_config["PYTHON_EXECUTABLE"],
                 "-m",
                 "pip",
                 "install",
@@ -578,7 +574,7 @@ class BuildPythonInstanceBase(ABC):
 
             # Generate wheel using
             cmd = [
-                str(self.venv_info_dict["python_executable"]),
+                str(self.package_env_config["PYTHON_EXECUTABLE"]),
                 "-m",
                 "build",
                 "--verbose",

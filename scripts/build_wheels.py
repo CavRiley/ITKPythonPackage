@@ -466,7 +466,19 @@ def build_wheels_main() -> None:
     package_env_config["DOXYGEN_EXECUTABLE"] = _which("doxygen")
     package_env_config["GIT_EXECUTABLE"] = _which("git")
 
-    package_env_config["PYTHON_EXECUTABLE"] = _which("python")
+    # reliably find the python executable in pixi
+    cmd = [
+        package_env_config["PIXI_EXECUTABLE"],
+        "run",
+        "-e",
+        args.platform_env,
+        "python",
+        "-c",
+        "import sys; print(sys.executable)",
+    ]
+    package_env_config["PYTHON_EXECUTABLE"] = run_commandLine_subprocess(
+        cmd, env=os.environ.copy()
+    ).stdout.strip()
 
     oci_exe = resolve_oci_exe(os.environ.copy())
     package_env_config["OCI_EXE"] = oci_exe
@@ -522,8 +534,10 @@ def build_wheels_main() -> None:
     print("=" * 80)
     print("= Building Wheels with effetive command line")
     print("\n\n")
-    cmdline:str=f"{get_effective_command_line(parser, args)}"
-    with open(f"{args.build_dir_root}/effective_cmdline_{args.platform_env}.sh", "w") as f:
+    cmdline: str = f"{get_effective_command_line(parser, args)}"
+    with open(
+        f"{args.build_dir_root}/effective_cmdline_{args.platform_env}.sh", "w"
+    ) as f:
         f.write(cmdline)
     print(f"cmdline: {cmdline}")
     print("\n\n\n\n")

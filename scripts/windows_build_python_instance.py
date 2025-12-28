@@ -251,11 +251,13 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
 
         # Create venv related paths
         # On windows use base python interpreter, and not a virtual env
-        primary_python_base_dir: Path = self.python_executable.parent.parent
+        primary_python_base_dir: Path = Path(
+            self.package_env_config["PYTHON_EXECUTABLE"]
+        ).parent.parent
         venv_base_dir: Path = primary_python_base_dir
-        venv_bin_path = self.python_executable.parent
+        venv_bin_path = self.package_env_config["PYTHON_EXECUTABLE"].parent
 
-        python_executable = self.python_executable
+        python_executable = self.package_env_config["PYTHON_EXECUTABLE"]
         python_include_dir = primary_python_base_dir / "include"
         python_major, python_minor = get_python_version(self.platform_env)
         if python_minor >= 11:
@@ -272,7 +274,6 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
             )
 
         self.venv_info_dict = {
-            "python_executable": python_executable,
             "python_include_dir": python_include_dir,
             "python_library": python_library,
             "venv_bin_path": venv_bin_path,
@@ -281,12 +282,12 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         }
 
     def discover_python_venvs(
-        self, platform_os_name: str, platform_architechure: str
+        self, platform_os_name: str, platform_architecture: str
     ) -> list[str]:
         default_platform_envs = [
-            f"39-{platform_architechure}",
-            f"310-{platform_architechure}",
-            f"311-{platform_architechure}",
+            f"39-{platform_architecture}",
+            f"310-{platform_architecture}",
+            f"311-{platform_architecture}",
         ]
         return default_platform_envs
 
