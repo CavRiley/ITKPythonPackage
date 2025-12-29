@@ -84,7 +84,7 @@ class BuildPythonInstanceBase(ABC):
         self.itk_module_deps = itk_module_deps
         self.prepare_build_env()
 
-        self._build_type = "Release"
+        self.package_env_config["BUILD_TYPE"] = "Release"
         # Unified place to collect cmake -D definitions for this instance
         self.cmake_cmdline_definitions: CMakeArgumentBuilder = CMakeArgumentBuilder()
         # Seed from legacy cmake_options if provided as ['-D<KEY>=<VALUE>', ...]
@@ -105,7 +105,7 @@ class BuildPythonInstanceBase(ABC):
         )
         self.cmake_compiler_configurations.update(
             {
-                "CMAKE_BUILD_TYPE:STRING": f"{self._build_type}",
+                "CMAKE_BUILD_TYPE:STRING": self.package_env_config["BUILD_TYPE"],
             }
         )
         # Set cmake flags for the compiler if CC or CXX are specified
@@ -513,7 +513,7 @@ class BuildPythonInstanceBase(ABC):
             str(out_dir),
             "--no-isolation",
             "--skip-dependency-check",
-            f"--config-setting=cmake.build-type={self._build_type}",
+            f"--config-setting=cmake.build-type={self.package_env_config['BUILD_TYPE']}",
         ]
 
         # Collect scikit-build CMake definitions
@@ -585,7 +585,7 @@ class BuildPythonInstanceBase(ABC):
                 str(self.build_dir_root / "dist"),
                 "--no-isolation",
                 "--skip-dependency-check",
-                f"--config-setting=cmake.build-type={self._build_type}",
+                f"--config-setting=cmake.build-type={self.package_env_config['BUILD_TYPE']}",
                 f"--config-setting=cmake.source-dir={self.package_env_config['IPP_SOURCE_DIR'] / 'BuildWheelsSupport'}",
                 f"--config-setting=build-dir={wheel_configbuild_dir_root/'build'}",
             ]

@@ -31,7 +31,6 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
     def prepare_build_env(self) -> None:
         # #############################################
         # ### Setup build tools
-        self._build_type = "Release"
         self.package_env_config["USE_TBB"] = "ON"
         self.package_env_config["TBB_DIR"] = str(
             self.build_dir_root / "build" / "oneTBB-prefix" / "lib" / "cmake" / "TBB"
