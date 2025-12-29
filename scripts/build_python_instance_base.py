@@ -51,7 +51,12 @@ class BuildPythonInstanceBase(ABC):
         self.ipp_dir = Path(__file__).parent.parent
 
         self.build_dir_root = build_dir_root
-
+        self.cmake_itk_source_build_configurations: CMakeArgumentBuilder = (
+            CMakeArgumentBuilder()
+        )
+        self.cmake_compiler_configurations: CMakeArgumentBuilder = (
+            CMakeArgumentBuilder()
+        )
         # TODO: Partial refactoring cleanup later
         package_env_config["IPP_SOURCE_DIR"] = self.ipp_dir
         IPP_BuildWheelsSupport_DIR: Path = self.ipp_dir / "BuildWheelsSupport"
@@ -100,9 +105,7 @@ class BuildPythonInstanceBase(ABC):
                     continue
                 # Preserve value verbatim (may contain quotes)
                 self.cmake_cmdline_definitions.set(key, value)
-        self.cmake_compiler_configurations: CMakeArgumentBuilder = (
-            CMakeArgumentBuilder()
-        )
+
         self.cmake_compiler_configurations.update(
             {
                 "CMAKE_BUILD_TYPE:STRING": self.package_env_config["BUILD_TYPE"],
@@ -130,9 +133,6 @@ class BuildPythonInstanceBase(ABC):
                 "CMAKE_CXX_COMPILER_LAUNCHER:FILEPATH", f"{ccache_exe}"
             )
 
-        self.cmake_itk_source_build_configurations: CMakeArgumentBuilder = (
-            CMakeArgumentBuilder()
-        )
         self.cmake_itk_source_build_configurations.update(
             # ITK wrapping options
             {
