@@ -32,7 +32,10 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         # #############################################
         # ### Setup build tools
         self._build_type = "Release"
-        self._use_tbb: str = "ON"
+        self.package_env_config["USE_TBB"] = "ON"
+        self.package_env_config["TBB_DIR"] = str(
+            self.build_dir_root / "build" / "oneTBB-prefix" / "lib" / "cmake" / "TBB"
+        )
         # The interpreter is provided; ensure basic tools are available
         self.venv_paths()
         self.update_venv_itk_build_configurations()

@@ -29,9 +29,9 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
     def prepare_build_env(self) -> None:
         # #############################################
         # ### Setup build tools
-        self._build_type = "Release"
-        self._use_tbb: str = "OFF"
-        self._tbb_dir = None  # Reset from the default
+        self.package_env_config["USE_TBB"] = "OFF"
+        self.package_env_config["TBB_DIR"] = "NOT_FOUND"
+
         # The interpreter is provided; ensure basic tools are available
         self.venv_paths()
         self.update_venv_itk_build_configurations()
@@ -136,9 +136,9 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
         """Resolve virtualenv tool paths.
         platform_env may be a name under IPP_SOURCE_DIR/venvs or an absolute/relative path to a venv.
         """
-        primary_python_base_dir = Path(self.package_env_config[
-            "PYTHON_EXECUTABLE"
-        ]).parent.parent
+        primary_python_base_dir = Path(
+            self.package_env_config["PYTHON_EXECUTABLE"]
+        ).parent.parent
         # if True:
         #     self._pip_uninstall_itk_wildcard(self.package_env_config["PYTHON_EXECUTABLE"])
         (

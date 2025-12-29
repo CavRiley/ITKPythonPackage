@@ -82,11 +82,7 @@ class BuildPythonInstanceBase(ABC):
             Path(module_dependencies_root_dir) if module_dependencies_root_dir else None
         )
         self.itk_module_deps = itk_module_deps
-
-        self._use_tbb = "ON"
-        self._tbb_dir = (
-            self.build_dir_root / "build" / "oneTBB-prefix" / "lib" / "cmake" / "TBB"
-        )
+        self.prepare_build_env()
 
         self._build_type = "Release"
         # Unified place to collect cmake -D definitions for this instance
@@ -153,8 +149,8 @@ class BuildPythonInstanceBase(ABC):
                 "ITK_WRAP_PYTHON:BOOL": "ON",
                 "ITK_WRAP_DOC:BOOL": "ON",
                 "DOXYGEN_EXECUTABLE:FILEPATH": f"{self.package_env_config['DOXYGEN_EXECUTABLE']}",
-                "Module_ITKTBB:BOOL": f"{self._use_tbb}",
-                "TBB_DIR:PATH": f"{self._tbb_dir}",
+                "Module_ITKTBB:BOOL": self.package_env_config["USE_TBB"],
+                "TBB_DIR:PATH": self.package_env_config["TBB_DIR"],
                 # Python settings
                 "SKBUILD:BOOL": "ON",
             }
@@ -200,27 +196,28 @@ class BuildPythonInstanceBase(ABC):
     def run(self) -> None:
         """Run the full build flow for this Python instance."""
         # Use BuildManager to persist and resume build steps
-        self.prepare_build_env()
 
         # HACK
         if self.itk_module_deps:
             self._build_module_dependencies()
 
-        python_package_build_steps: OrderedDict = OrderedDict({
-            "01_superbuild_support_components": self.build_superbuild_support_components,
-            "02_build_wrapped_itk_cplusplus": self.build_wrapped_itk_cplusplus,
-            "03_build_wheels": self.build_itk_python_wheels,
-            "04_post_build_fixup": self.post_build_fixup,
-            "05_final_import_test": self.final_import_test,
-        })
+        python_package_build_steps: OrderedDict = OrderedDict(
+            {
+                "01_superbuild_support_components": self.build_superbuild_support_components,
+                "02_build_wrapped_itk_cplusplus": self.build_wrapped_itk_cplusplus,
+                "03_build_wheels": self.build_itk_python_wheels,
+                "04_post_build_fixup": self.post_build_fixup,
+                "05_final_import_test": self.final_import_test,
+            }
+        )
         if self.module_source_dir is not None:
             python_package_build_steps[
                 f"06_build_external_module_wheel_{self.module_source_dir.name}"
             ] = self.build_external_module_python_wheel
         else:
-            python_package_build_steps[
-                f"06_build_external_module_wheel_skipped"
-            ] = lambda: None
+            python_package_build_steps[f"06_build_external_module_wheel_skipped"] = (
+                lambda: None
+            )
         if self.build_itk_tarball_cache:
             python_package_build_steps[
                 f"07_build_itk_tarball_cache_{self.package_env_config['OS_NAME']}_{self.package_env_config['ARCH']}"
@@ -252,7 +249,7 @@ class BuildPythonInstanceBase(ABC):
         cmake_superbuild_argumets.update(
             {
                 "ITKPythonPackage_BUILD_PYTHON:BOOL": "OFF",
-                "ITKPythonPackage_USE_TBB:BOOL": f"{self._use_tbb}",
+                "ITKPythonPackage_USE_TBB:BOOL": self.package_env_config["USE_TBB"],
                 "ITK_SOURCE_DIR:PATH": f"{self.package_env_config['ITK_SOURCE_DIR']}",
                 "ITK_GIT_TAG:STRING": f"{self.package_env_config['ITK_GIT_TAG']}",
             }
@@ -600,7 +597,7 @@ class BuildPythonInstanceBase(ABC):
             )
             scikitbuild_cmdline_args.update(
                 {
-                    "ITKPythonPackage_USE_TBB:BOOL": f"{self._use_tbb}",
+                    "ITKPythonPackage_USE_TBB:BOOL": self.package_env_config["USE_TBB"],
                     "ITKPythonPackage_ITK_BINARY_REUSE:BOOL": "ON",
                     "ITKPythonPackage_WHEEL_NAME:STRING": f"{wheel_name}",
                     "DOXYGEN_EXECUTABLE:FILEPATH": f"{self.package_env_config['DOXYGEN_EXECUTABLE']}",
