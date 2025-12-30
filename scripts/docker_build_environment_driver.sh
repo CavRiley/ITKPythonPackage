@@ -23,6 +23,8 @@ for v in "${required_vars[@]}"; do
 done
 
 CONTAINER_PACKAGE_DIST=${CONTAINER_WORK_DIR}/dist
+BUILD_DIR_ROOT=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
+ITK_SOURCE_DIR=${ITK_SOURCER_DIR:=${BUILD_DIR_ROOT}/ITK}
 
 # Set BUILD_WHEELS_EXTRA_FLAGS="" to disable building the tarball or force cleanup
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=" --build-itk-tarball-cache "}
@@ -44,8 +46,9 @@ for pyver in ${PY_ENVS}; do
     ${CONTAINER_WORK_DIR}/scripts/build_wheels.py \
     --platform-env ${PIXI_ENV} \
     ${BUILD_WHEELS_EXTRA_FLAGS} \
-   --build-dir-root ${CONTAINER_WORK_DIR} \
+   --build-dir-root ${BUILD_DIR_ROOT} \
+   --itk-source-dir ${ITK_SOURCE_DIR} \
    --itk-git-tag ${ITK_GIT_TAG} \
-   --manylinux-version ${MANYLINUX_VERSION} \
+   --manylinux-version ${MANYLINUX_VERSION}
 
 done

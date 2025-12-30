@@ -1,4 +1,4 @@
-
+#!/bin/bash
 # Run this script to build the ITK Python wheel packages for Linux.
 #
 # Versions can be restricted by passing them in as arguments to the script
@@ -17,7 +17,14 @@
 script_dir=$(cd $(dirname $0) || exit 1; pwd)
 _ipp_dir=$(dirname ${script_dir})
 
-
+for cand in nerdctl docker podman; do
+  which ${cand} > /dev/null
+  if [ $? -eq 0 ]; then
+    export OCI_EXE=${OCI_EXE:="$cand"}
+    break
+  fi
+done
+echo "FOUND OCI_EXE=$(which ${OCI_EXE})"
 
 #TODO: This needs updating to pass along values to
 ITK_GIT_TAG=${ITK_GIT_TAG:="main"}
@@ -62,7 +69,7 @@ mkdir -p ${HOST_PACKAGE_DIST}
 
 
 DOCKER_ARGS="  -v ${_ipp_dir}/dist:${CONTAINER_WORK_DIR}/dist/ "
-if [ "${ITK_SOURCE_DIR}" -ne "" ]; then
+if [ "${ITK_SOURCE_DIR}" != "" ]; then
   DOCKER_ARGS+=" -v${ITK_SOURCE_DIR}:${CONTAINER_ITK_SOURCE_DIR} "
 fi
 DOCKER_ARGS+=" -e PYTHONUNBUFFERED=1 " # Turn off buffering of outputs in python
