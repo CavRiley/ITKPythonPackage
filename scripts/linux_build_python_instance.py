@@ -94,7 +94,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
                 metawheel_dir.mkdir(parents=True, exist_ok=True)
                 self.echo_check_call(
                     [
-                        self.venv_info_dict["python_executable"],
+                        self.package_env_config["PYTHON_EXECUTABLE"],
                         "-m",
                         "wheel",
                         "unpack",
@@ -125,7 +125,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
                     metawheel_dist.mkdir(parents=True, exist_ok=True)
                     self.echo_check_call(
                         [
-                            self.venv_info_dict["python_executable"],
+                            self.package_env_config["PYTHON_EXECUTABLE"],
                             "-m",
                             "wheel",
                             "pack",
@@ -159,7 +159,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             if self.package_env_config["ARCH"] == "x64" and manylinux_ver:
                 plat = f"manylinux{manylinux_ver}_x86_64"
             cmd = [
-                self.venv_info_dict["python_executable"],
+                self.package_env_config["PYTHON_EXECUTABLE"],
                 "-m",
                 "auditwheel",
                 "repair",

@@ -309,18 +309,18 @@ class BuildPythonInstanceBase(ABC):
         print("Wheel successfully installed.")
         # Basic imports
         self.echo_check_call(
-            [self.venv_info_dict["python_executable"], "-c", "import itk;"]
+            [self.package_env_config["PYTHON_EXECUTABLE"], "-c", "import itk;"]
         )
         self.echo_check_call(
             [
-                self.venv_info_dict["python_executable"],
+                self.package_env_config["PYTHON_EXECUTABLE"],
                 "-c",
                 "import itk; image = itk.Image[itk.UC, 2].New()",
             ]
         )
         self.echo_check_call(
             [
-                self.venv_info_dict["python_executable"],
+                self.package_env_config["PYTHON_EXECUTABLE"],
                 "-c",
                 "import itkConfig; itkConfig.LazyLoading=False; import itk;",
             ]
@@ -328,7 +328,7 @@ class BuildPythonInstanceBase(ABC):
         # Full doc tests
         self.echo_check_call(
             [
-                self.venv_info_dict["python_executable"],
+                self.package_env_config["PYTHON_EXECUTABLE"],
                 str(
                     self.package_env_config["IPP_SOURCE_DIR"]
                     / "docs"
@@ -461,7 +461,7 @@ class BuildPythonInstanceBase(ABC):
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure venv tools are first in PATH
-        py_exe = str(self.venv_info_dict["python_executable"])  # Python3_EXECUTABLE
+        py_exe = str(self.package_env_config["PYTHON_EXECUTABLE"])  # Python3_EXECUTABLE
 
         # Compute Python include directory (Python3_INCLUDE_DIR)
         py_include = self.venv_info_dict.get("python_include_dir", "")
