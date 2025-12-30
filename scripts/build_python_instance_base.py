@@ -844,14 +844,14 @@ class BuildPythonInstanceBase(ABC):
                 itk_packaging_reference_dir,
                 "-cf",
                 str(tar_path),
-                '--exclude="*.o"',  # Do not include object files
-                '--exclude="*/__pycache__/"',  # Do not include __pycache__
-                '--exclude="*/.git/"',
-                '--exclude="*/.idea/"',
-                '--exclude="*/.pixi/"',
-                '--exclude="*/CastXML/"',
-                '--exclude="*/castxml_inputs/"',
-                '--exclude="*/Wrapping/Modules/"',
+                '--exclude=*.o',  # Do not include object files
+                '--exclude=*/__pycache__/*',  # Do not include __pycache__
+                '--exclude=*/.git/*',
+                '--exclude=*/.idea/*',
+                '--exclude=*/.pixi/*',
+                '--exclude=*/CastXML/*',
+                '--exclude=*/castxml_inputs/*',
+                '--exclude=*/Wrapping/Modules/*',
                 *tarball_include_paths,
             ]
         )
