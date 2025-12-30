@@ -819,7 +819,7 @@ class BuildPythonInstanceBase(ABC):
         Mirrors the historical scripts/*-build-tarball.sh behavior:
         - zstd compress with options (-10 -T6 --long=31)
         """
-        arch_postfix = f"-{self.package_env_config['ARCH']}"
+        arch_postfix: str = f"{self.package_env_config['ARCH']}"
         tar_name = (
             f"ITKPythonBuilds-{self.get_pixi_environment_name()}-{arch_postfix}.tar"
         )
