@@ -68,11 +68,7 @@ eval ${_download_cmd}
 #NOTE: in this scenerio, untarred_ipp_dir is extracted from tarball
 #      during ${download_script_dir}/dockcross-manylinux-download-cache.sh
 untarred_ipp_dir=${download_script_dir}/ITKPythonPackage
-package_env_file=${untarred_ipp_dir}/build/package.env
-if [ ! -f "${package_env_file}" ]; then
-  source ${untarred_ipp_dir}/generate_build_environment.sh -o ${package_env_file}
-fi
-source "${package_env_file}"
+
 
 
 # -----------------------------------------------------------------------

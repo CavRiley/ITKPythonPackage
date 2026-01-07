@@ -14,15 +14,12 @@
 #
 # Shared libraries can be included in the wheel by setting DYLD_LIBRARY_PATH before
 # running this script.
-#
+
 # ===========================================
 # ENVIRONMENT VARIABLES: ITK_GIT_TAG ITKPYTHONPACKAGE_ORG ITK_USE_LOCAL_PYTHON
 #
 # These variables are set with the `export` bash command before calling the script.
 # For example,
-#
-#   generate_build_environment.sh # creates default build/package.env
-#   edit build/package.env with desired build elements
 #   scripts/macpython-build-module-wheels.sh 3.7 3.9
 #
 ########################################################################
@@ -50,19 +47,7 @@ if [[ ! -f ITKPythonBuilds-macosx${tarball_arch}.tar.zst ]]; then
 fi
 unzstd --long=31 ITKPythonBuilds-macosx${tarball_arch}.tar.zst -o ITKPythonBuilds-macosx${tarball_arch}.tar
 PATH="$(dirname $(brew list gnu-tar | grep gnubin)):$PATH"
-gtar xf ITKPythonBuilds-macosx${tarball_arch}.tar --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot \
-  ITKPythonPackage/ITK-source \
-  ITKPythonPackageRequiredExtractionDir.txt \
-  ITKPythonPackage/scripts
-
-# Extract subdirectories specific to the compiled python versions
-args=( "$@"  )
-source ITKPythonPackage/scripts/macpython-build-common.sh
-for version in "$PYTHON_VERSIONS"; do
-  gtar xf ITKPythonBuilds-macosx${tarball_arch}.tar --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot \
-    --wildcards "ITKPythonPackage/ITK-${version}-macosx*" \
-    "ITKPythonPackage/venvs/${version}"
-done
+gtar xf ITKPythonBuilds-macosx${tarball_arch}.tar --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
 
 rm ITKPythonBuilds-macosx${tarball_arch}.tar
 
@@ -80,7 +65,7 @@ if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   rm -rf IPP-tmp/
 fi
 
-DASHBOARD_BUILD_DIRECTORY=/Users/svc-dashboard/D/P
+DASHBOARD_BUILD_DIRECTORY=${DASHBOARD_BUILD_DIRECTORY:=/Users/svc-dashboard/D/P}
 # Run build scripts
 sudo mkdir -p ${DASHBOARD_BUILD_DIRECTORY} && sudo chown $UID:$GID ${DASHBOARD_BUILD_DIRECTORY}
 if [[ ! -d ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage ]]; then

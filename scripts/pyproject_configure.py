@@ -304,7 +304,7 @@ of the `wheel_name` positional parameter.
 
 Usage::
 
-    pyproject_configure.py [-h] [--output-dir OUTPUT_DIR] [--env-file package.env] wheel_name
+    pyproject_configure.py [-h] [--output-dir OUTPUT_DIR] wheel_name
 
     positional arguments:
       wheel_name

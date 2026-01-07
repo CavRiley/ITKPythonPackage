@@ -7,11 +7,9 @@
 #   scripts/dockcross-manylinux-build-wheels.sh cp39
 #
 # A specialized manylinux image and tag can be used by setting
-# MANYLINUX_VERSION and IMAGE_TAG in build/package.env before running this script.
+# MANYLINUX_VERSION and IMAGE_TAG
 #
 # For example,
-#   generate_build_environment.sh # creates default build/package.env
-#   edit build/package.env with desired build elements
 #   scripts/dockcross-manylinux-build-module-wheels.sh cp39
 #
 script_dir=$(cd $(dirname $0) || exit 1; pwd)
@@ -53,7 +51,7 @@ done
 
 _local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
 # Generate dockcross scripts
-$OCI_EXE run --env-file "${_ipp_dir}/build/package.env" \
+$OCI_EXE run \
              --rm docker.io/dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG} > ${_local_dockercross_script}
 chmod u+x ${_local_dockercross_script}
 

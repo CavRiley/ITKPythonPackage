@@ -13,17 +13,11 @@
 #   scripts/dockcross-manylinux-build-module-wheels.sh cp39
 #
 # ===========================================
-# See generate_build_environment.sh for description of environmental variable usage
 # ENVIRONMENT VARIABLES: LD_LIBRARY_PATH, MANYLINUX_VERSION, TARGET_ARCH, IMAGE_TAG, ITK_MODULE_PREQ, ITK_MODULE_NO_CLEANUP, NO_SUDO
 ########################################################################
 
 script_dir=$(cd $(dirname $0) || exit 1; pwd)
 _ipp_dir=$(dirname ${script_dir})
-package_env_file=${_ipp_dir}/build/package.env
-if [ ! -f "${package_env_file}" ]; then
-  ${_ipp_dir}/generate_build_environment.sh -o ${package_env_file}
-fi
-source "${package_env_file}"
 
 
 if [[ -n ${ITK_MODULE_PREQ} ]]; then
@@ -83,17 +77,17 @@ if [[ "${TARGET_ARCH}" = "aarch64" ]]; then
     docker_prefix="sudo"
   fi
 
-  ${docker_prefix} $OCI_EXE run --env-file "${_ipp_dir}/build/package.env" \
+  ${docker_prefix} $OCI_EXE run  \
                             --privileged --rm tonistiigi/binfmt --install all
 
   # Build wheels
   DOCKER_ARGS+=" --rm"
-  ${docker_prefix} $OCI_EXE run --env-file "${_ipp_dir}/build/package.env" \
+  ${docker_prefix} $OCI_EXE run \
                                 $DOCKER_ARGS ${CONTAINER_SOURCE} "/ITKPythonPackage/scripts/internal/manylinux-aarch64-build-module-wheels.sh" "$@"
 else
   # Generate dockcross scripts
   _local_dockercross_script=${_ipp_dir}/build/runner_module_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
-  $OCI_EXE run --env-file "${_ipp_dir}/build/package.env" \
+  $OCI_EXE run \
                --rm ${CONTAINER_SOURCE} > ${_local_dockercross_script}
   chmod u+x ${_local_dockercross_script}
 
