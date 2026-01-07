@@ -820,9 +820,7 @@ class BuildPythonInstanceBase(ABC):
         - zstd compress with options (-10 -T6 --long=31)
         """
         arch_postfix: str = f"{self.package_env_config['ARCH']}"
-        tar_name = (
-            f"ITKPythonBuilds-{self.get_pixi_environment_name()}-{arch_postfix}.tar"
-        )
+        tar_name: str = f"ITKPythonBuilds-{arch_postfix}.tar"
         itk_packaging_reference_dir = self.build_dir_root.parent
 
         tar_path: Path = itk_packaging_reference_dir / tar_name
@@ -840,6 +838,7 @@ class BuildPythonInstanceBase(ABC):
         self.echo_check_call(
             [
                 "tar",
+                "-u",
                 "-C",
                 itk_packaging_reference_dir,
                 "-cf",
