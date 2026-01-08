@@ -839,7 +839,12 @@ class BuildPythonInstanceBase(ABC):
             ),
         ]
 
-        tar_flags: str = "-uf" if tar_path.exists() else "-cf"
+        if tar_path.exists():
+            print(f"Removing existing tarball {tar_path}")
+            tar_path.unlink()
+        if zst_path.exists():
+            print(f"Removing existing zstd tarball {zst_path}")
+            zst_path.unlink()
 
         # Create tarball of
         self.echo_check_call(
@@ -847,7 +852,7 @@ class BuildPythonInstanceBase(ABC):
                 "tar",
                 "-C",
                 itk_packaging_reference_dir,
-                tar_flags,
+                "-cf",
                 str(tar_path),
                 "--exclude=*.o",  # Do not include object files
                 "--exclude=*/__pycache__/*",  # Do not include __pycache__
