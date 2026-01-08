@@ -231,10 +231,14 @@ class BuildPythonInstanceBase(ABC):
         build_manager.save()
         for build_step_name, build_step_func in python_package_build_steps.items():
             print("=" * 80)
-            print(f"Running build step: {build_step_name}")
+            print(
+                f"Running build step: {build_step_name}:  recording status in {build_report_fn}"
+            )
             build_manager.run_step(build_step_name, build_step_func)
             build_manager.save()
-            print(f"Build step {build_step_name} completed.")
+            print(
+                f"Build step {build_step_name} completed.  Edit {build_report_fn} to rerun step."
+            )
             print("=" * 80)
 
     def build_superbuild_support_components(self):
@@ -820,7 +824,8 @@ class BuildPythonInstanceBase(ABC):
         - zstd compress with options (-10 -T6 --long=31)
         """
         arch_postfix: str = f"{self.package_env_config['ARCH']}"
-        tar_name: str = f"ITKPythonBuilds-{arch_postfix}.tar"
+        platform_name: str = os.name
+        tar_name: str = f"ITKPythonBuilds-{platform_name}-{arch_postfix}.tar"
         itk_packaging_reference_dir = self.build_dir_root.parent
 
         tar_path: Path = itk_packaging_reference_dir / tar_name
@@ -834,22 +839,24 @@ class BuildPythonInstanceBase(ABC):
             ),
         ]
 
+        tar_flags: str = "-uf" if tar_path.exists() else "-cf"
+
         # Create tarball of
         self.echo_check_call(
             [
                 "tar",
                 "-C",
                 itk_packaging_reference_dir,
-                "-uf",
+                tar_flags,
                 str(tar_path),
-                '--exclude=*.o',  # Do not include object files
-                '--exclude=*/__pycache__/*',  # Do not include __pycache__
-                '--exclude=*/.git/*',
-                '--exclude=*/.idea/*',
-                '--exclude=*/.pixi/*',
-                '--exclude=*/CastXML/*',
-                '--exclude=*/castxml_inputs/*',
-                '--exclude=*/Wrapping/Modules/*',
+                "--exclude=*.o",  # Do not include object files
+                "--exclude=*/__pycache__/*",  # Do not include __pycache__
+                "--exclude=*/.git/*",
+                "--exclude=*/.idea/*",
+                "--exclude=*/.pixi/*",
+                "--exclude=*/CastXML/*",
+                "--exclude=*/castxml_inputs/*",
+                "--exclude=*/Wrapping/Modules/*",
                 *tarball_include_paths,
             ]
         )
@@ -879,7 +886,7 @@ class BuildPythonInstanceBase(ABC):
         env=None,
         **kwargs: dict,
     ) -> int:
-        """Print the command then run subprocess.check_call.
+        """Print the command, then run subprocess.check_call.
 
         Parameters
         ----------
