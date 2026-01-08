@@ -77,13 +77,13 @@ def get_default_platform_build(default_python_version: str = "py311") -> str:
     if from_pixi:
         return from_pixi
     else:
-        if os.name == "windows":
-            return f"windows-{default_python_version}"
-        elif os.name == "linux":
-            return f"linux-{default_python_version}"
-        elif os.name == "macos":
+        if sys.platform == "darwin":
             return f"macos-{default_python_version}"
-    return "unkown-platform"
+        elif sys.platform.startswith("linux"):
+            return f"linux-{default_python_version}"
+        elif sys.platform == "win32":
+            return f"windows-{default_python_version}"
+    return f"unkown-{default_python_version}"
 
 
 def get_effective_command_line(

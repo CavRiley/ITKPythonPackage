@@ -824,7 +824,7 @@ class BuildPythonInstanceBase(ABC):
         - zstd compress with options (-10 -T6 --long=31)
         """
         arch_postfix: str = f"{self.package_env_config['ARCH']}"
-        platform_name: str = os.name
+        platform_name: str = self.get_default_platform_build().split("-")[0]
         tar_name: str = f"ITKPythonBuilds-{platform_name}-{arch_postfix}.tar"
         itk_packaging_reference_dir = self.build_dir_root.parent
 
