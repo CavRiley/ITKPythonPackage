@@ -838,10 +838,9 @@ class BuildPythonInstanceBase(ABC):
         self.echo_check_call(
             [
                 "tar",
-                "-u",
                 "-C",
                 itk_packaging_reference_dir,
-                "-cf",
+                "-uf",
                 str(tar_path),
                 '--exclude=*.o',  # Do not include object files
                 '--exclude=*/__pycache__/*',  # Do not include __pycache__
