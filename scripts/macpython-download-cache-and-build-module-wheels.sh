@@ -16,11 +16,11 @@
 # running this script.
 
 # ===========================================
-# ENVIRONMENT VARIABLES: ITK_GIT_TAG ITKPYTHONPACKAGE_ORG ITK_USE_LOCAL_PYTHON
+# ENVIRONMENT VARIABLES: ITK_GIT_TAG ITKPYTHONPACKAGE_ORG ITK_USE_LOCAL_PYTHON ITK_PACKAGE_VERSION
 #
 # These variables are set with the `export` bash command before calling the script.
 # For example,
-#   scripts/macpython-build-module-wheels.sh 3.7 3.9
+#   scripts/macpython-build-module-wheels.sh 3.9 3.11
 #
 ########################################################################
 
