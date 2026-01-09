@@ -860,6 +860,7 @@ class BuildPythonInstanceBase(ABC):
                 str(tar_path),
                 "--exclude=*.o",  # Do not include object files
                 "--exclude=*/__pycache__/*",  # Do not include __pycache__
+                "--exclude=._*", # Exclude mac dot files
                 "--exclude=*/.git/*",
                 "--exclude=*/.idea/*",
                 "--exclude=*/.pixi/*",
