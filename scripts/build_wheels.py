@@ -511,7 +511,7 @@ def build_wheels_main() -> None:
 
     print("=" * 80)
     print("=" * 80)
-    print("= Building Wheels with effetive command line")
+    print("= Building Wheels with effective command line")
     print("\n\n")
     cmdline: str = f"{get_effective_command_line(parser, args)}"
     args.build_dir_root.mkdir(parents=True, exist_ok=True)
