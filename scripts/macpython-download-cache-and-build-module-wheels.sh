@@ -20,19 +20,38 @@
 #
 # These variables are set with the `export` bash command before calling the script.
 # For example,
-#   scripts/macpython-build-module-wheels.sh 3.9 3.11
+#   scripts/macpython-build-module-wheels.sh 3.9 3.10 3.11
 #
 ########################################################################
+THIS_MODULE_DIRECTORY=$(cd $(dirname $0) || exit 1; pwd)
 
-# Install dependencies
-brew update
-brew install --quiet zstd aria2 gnu-tar doxygen ninja
-#
-# As discussed in issue #282, rustup is not needed for successful packaging
-# but brew eco-system will warn verbosely about it being out of date which
-# makes identifying other errors more difficult. upgrading rustup silences
-# the warnings unrelated to package building for easing developer reviews.
-brew upgrade --quiet cmake rustup
+if [ -z "${ITK_PACKAGE_VERSION}" ]; then
+   echo "MUST SET ITK_PACKAGE_VERSION BEFORE RUNNING THIS SCRIPT"
+   exit -1
+fi
+
+DASHBOARD_BUILD_DIRECTORY=${DASHBOARD_BUILD_DIRECTORY:=/Users/svc-dashboard/D/P}
+ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG:=InsightSoftwareConsortium}
+# Run build scripts
+if [ -z "${NO_SUDO}" ] || [ ${NO_SUDO} -ne 1 ]; then
+   sudo_exec=sudo
+fi
+if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
+  ${sudo_exec} mkdir -p ${DASHBOARD_BUILD_DIRECTORY} && ${sudo_exec} chown $UID:$GID ${DASHBOARD_BUILD_DIRECTORY}
+fi
+cd ${DASHBOARD_BUILD_DIRECTORY}
+
+if [ -z "${NO_BREW_UPGRADE}" ] || [ ${NO_BREW_UPGRADE} -ne 1 ]; then
+  # Install dependencies
+  brew update
+  brew install --quiet zstd aria2 gnu-tar doxygen ninja pixi
+  #
+  # As discussed in issue #282, rustup is not needed for successful packaging
+  # but brew eco-system will warn verbosely about it being out of date which
+  # makes identifying other errors more difficult. upgrading rustup silences
+  # the warnings unrelated to package building for easing developer reviews.
+  brew upgrade --quiet cmake rustup
+fi
 
 if [[ $(arch) == "arm64" ]]; then
   tarball_arch="-arm64"
@@ -40,44 +59,57 @@ else
   tarball_arch=""
 fi
 # Fetch ITKPythonBuilds archive containing ITK build artifacts
-rm -fr ITKPythonPackage
 echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
-if [[ ! -f ITKPythonBuilds-macosx${tarball_arch}.tar.zst ]]; then
-  aria2c -c --file-allocation=none -o ITKPythonBuilds-macosx${tarball_arch}.tar.zst -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
+local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar.zst
+if [[ ! -f ${local_compress_tarball_name} ]]; then
+        aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
 fi
-unzstd --long=31 ITKPythonBuilds-macosx${tarball_arch}.tar.zst -o ITKPythonBuilds-macosx${tarball_arch}.tar
-PATH="$(dirname $(brew list gnu-tar | grep gnubin)):$PATH"
-gtar xf ITKPythonBuilds-macosx${tarball_arch}.tar --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
-
-rm ITKPythonBuilds-macosx${tarball_arch}.tar
+local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar
+unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
+PATH="$(dirname $(brew list gnu-tar |grep gtar |grep "/bin/")):$PATH"
+gtar xf ${local_tarball_name} --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
+rm ${local_tarball_name}
 
 # Optional: Update build scripts
 if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
-  git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "IPP-tmp"
-  pushd IPP-tmp/
+  local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
+  if [ ! -d ${local_clone_ipp}/.git ]; then
+    git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
+  fi
+  pushd ${local_clone_ipp}
     git checkout "${ITKPYTHONPACKAGE_TAG}"
+    git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
     git status
   popd
-  # Graft the newly cloned files over the untarred files
-  rm -rf ITKPythonPackage/scripts/
-  cp -r IPP-tmp/scripts ITKPythonPackage/
-  rm -rf IPP-tmp/
-fi
-
-DASHBOARD_BUILD_DIRECTORY=${DASHBOARD_BUILD_DIRECTORY:=/Users/svc-dashboard/D/P}
-# Run build scripts
-sudo mkdir -p ${DASHBOARD_BUILD_DIRECTORY} && sudo chown $UID:$GID ${DASHBOARD_BUILD_DIRECTORY}
-if [[ ! -d ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage ]]; then
-  mv ITKPythonPackage ${DASHBOARD_BUILD_DIRECTORY}/
-fi
-
-# Optionally install baseline Python versions
-if [[ ! ${ITK_USE_LOCAL_PYTHON} ]]; then
-  echo "Fetching Python frameworks"
-  sudo rm -rf /Library/Frameworks/Python.framework/Versions/*
-  ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/macpython-install-python.sh
+  rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
 fi
 
 echo "Building module wheels"
-${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/macpython-build-module-wheels.sh "${args[@]}"
+cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
+args=$@
+echo "${args[@]}"
+for py_indicator in ${args[@]}; do
+   # The following line is to convert "py3.11|py311|cp311|3.11" -> py311 normalized form
+   py_squashed_numeric=$(echo "${py_indicator}" |sed 's/py//g' |sed 's/cp//g' |sed 's/\.//g')
+   pyenv=py${py_squashed_numeric}
+   pixi run -e macos-${pyenv} -- python \
+           ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py \
+           --platform-env macos-${pyenv} \
+           --lib-paths '' '' \
+           --module-source-dir ${THIS_MODULE_DIRECTORY} \
+           --module-dependencies-root-dir ${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES \
+           --itk-module-deps "${ITK_MODULE_PREQ}" \
+           --no-build-itk-tarball-cache \
+           --build-dir-root ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build \
+           --manylinux-version '' \
+           --itk-git-tag ${ITK_PACKAGE_VERSION} \
+           --itk-source-dir ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK \
+           --itk-package-version ${ITK_PACKAGE_VERSION} \
+           --itk-pythonpackage-org ${ITKPYTHONPACKAGE_ORG} \
+           --itk-pythonpackage-tag ${ITKPYTHONPACKAGE_TAG} \
+           --no-use-sudo \
+           --no-use-ccache
+
+           #Let this be automatically selected --macos-deployment-target 10.7 \
+done
