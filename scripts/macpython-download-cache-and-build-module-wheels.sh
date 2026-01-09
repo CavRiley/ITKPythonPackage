@@ -23,7 +23,9 @@
 #   scripts/macpython-build-module-wheels.sh 3.9 3.10 3.11
 #
 ########################################################################
-THIS_MODULE_DIRECTORY=$(cd $(dirname $0) || exit 1; pwd)
+DEFAULT_MODULE_DIRECTORY=$(cd $(dirname $0) || exit 1; pwd)
+# if not specified, use the current directory for MODULE_SRC_DIRECTORY
+MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY:=${DEFAULT_MODULE_DIRECTORY}}
 
 if [ -z "${ITK_PACKAGE_VERSION}" ]; then
    echo "MUST SET ITK_PACKAGE_VERSION BEFORE RUNNING THIS SCRIPT"
@@ -97,7 +99,7 @@ for py_indicator in ${args[@]}; do
            ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py \
            --platform-env macos-${pyenv} \
            --lib-paths '' '' \
-           --module-source-dir ${THIS_MODULE_DIRECTORY} \
+           --module-source-dir ${MODULE_SRC_DIRECTORY} \
            --module-dependencies-root-dir ${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES \
            --itk-module-deps "${ITK_MODULE_PREQ}" \
            --no-build-itk-tarball-cache \
