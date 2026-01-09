@@ -10,11 +10,11 @@ import argparse
 import shlex
 from pathlib import Path
 
-
 from wheel_builder_utils import (
     detect_platform,
     run_commandLine_subprocess,
     default_manylinux,
+    get_default_platform_build,
     compute_itk_package_version,
     resolve_oci_exe,
     _which,
@@ -70,20 +70,6 @@ def in_pixi_env() -> bool:
     -------
     """
     return "PIXI_ENVIRONMENT_NAME" in os.environ and "PIXI_PROJECT_ROOT" in os.environ
-
-
-def get_default_platform_build(default_python_version: str = "py311") -> str:
-    from_pixi = os.environ.get("PIXI_ENVIRONMENT_NAME", None)
-    if from_pixi:
-        return from_pixi
-    else:
-        if sys.platform == "darwin":
-            return f"macos-{default_python_version}"
-        elif sys.platform.startswith("linux"):
-            return f"linux-{default_python_version}"
-        elif sys.platform == "win32":
-            return f"windows-{default_python_version}"
-    return f"unkown-{default_python_version}"
 
 
 def get_effective_command_line(

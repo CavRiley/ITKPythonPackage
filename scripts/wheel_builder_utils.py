@@ -539,3 +539,17 @@ def safe_copy_if_different(src: Path, dst: Path) -> None:
         print(f"WARNING: Failed to compare {src} to {dst}: {e}")
     if not same:
         shutil.copyfile(src, dst)
+
+
+def get_default_platform_build(default_python_version: str = "py311") -> str:
+    from_pixi = os.environ.get("PIXI_ENVIRONMENT_NAME", None)
+    if from_pixi:
+        return from_pixi
+    else:
+        if sys.platform == "darwin":
+            return f"macos-{default_python_version}"
+        elif sys.platform.startswith("linux"):
+            return f"linux-{default_python_version}"
+        elif sys.platform == "win32":
+            return f"windows-{default_python_version}"
+    return f"unkown-{default_python_version}"
