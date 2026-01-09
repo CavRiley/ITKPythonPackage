@@ -238,6 +238,10 @@ def run_commandLine_subprocess(
     )
     if completion_info.returncode != 0 and check:
         error_msg = "!~" * 40
+        error_msg += "ENVIRONMENT: ================="
+        for k, v in env.items():
+            error_msg += f"\n{k}={v}"
+        error_msg += "=============================="
         if completion_info.stdout:
             error_msg += f"\nStdout:\n {completion_info.stdout}"
         if completion_info.stderr:
