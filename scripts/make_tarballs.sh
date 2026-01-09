@@ -35,13 +35,24 @@ if [ "${script_dir}" !=  "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts"
    exit 1
 fi
 
+if [ ! -f ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi/bin/pixi ]; then
+  #PIXI INSTALL
+  export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi
+  export UV_CACHE_DIR=$XDG_CACHE_HOME/uv
+  if [ ! -f  ${PIXI_HOME}/bin/pixi ]; then
+    curl -fsSL https://pixi.sh/install.sh | sh
+    export PATH="${PIXI_HOME}/bin:$PATH"
+  fi
+fi
+
 ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION:=v6.0b02}
 for pyenv in py39; do # py310 py311; do
-  .pixi/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
+  cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
+  ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
           python3 scripts/build_wheels.py \
           --platform-env ${PLATFORM_PREFIX}-${pyenv} \
-          --build-dir-root ${DASHBOARD_BUILD_DIRECTORY} \
+          --build-dir-root ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build \
+          --itk-source-dir ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK \
           --itk-git-tag ${ITK_PACKAGE_VERSION} \
           --build-itk-tarball-cache
 done
-#  /Users/svc-dashboard/D/P
