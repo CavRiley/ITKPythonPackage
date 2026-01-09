@@ -245,7 +245,7 @@ def run_commandLine_subprocess(
         if completion_info.stderr:
             error_msg += f"\nStderr:\n {completion_info.stderr}"
         error_msg += f"Command failed with exit code {completion_info.returncode}: {' '.join(cmd)}"
-
+        print(error_msg)
         raise RuntimeError(error_msg)
 
     return completion_info
