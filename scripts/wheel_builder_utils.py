@@ -222,7 +222,10 @@ def which_required(name: str) -> str:
 
 
 def run_commandLine_subprocess(
-    cmd: list[str | Path], cwd: Path | None = None, env: dict = None, check: bool = True
+    cmd: list[str | Path],
+    cwd: Path | None = None,
+    env: dict = None,
+    check: bool = False,
 ) -> subprocess.CompletedProcess:
     cmd = [str(x) for x in cmd]
     print(f"Running >>>>>: {' '.join(cmd)}  ; # in cwd={cwd} with check={check}\n")
