@@ -516,7 +516,7 @@ def build_wheels_main() -> None:
     cmdline: str = f"{get_effective_command_line(parser, args)}"
     args.build_dir_root.mkdir(parents=True, exist_ok=True)
     with open(
-        args.build_dir_root / "effective_cmdline_{args.platform_env}.sh", "w"
+        args.build_dir_root / f"effective_cmdline_{args.platform_env}.sh", "w"
     ) as f:
         f.write("#!/bin/bash\n")
         f.write(
