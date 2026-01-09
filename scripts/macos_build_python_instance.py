@@ -196,7 +196,7 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
         try:
             # Optional: clean AppleDouble files if tool is available
             self.echo_check_call(
-                ["dot_clean", str(self.package_env_config["IPP_SOURCE_DIR"].name)]
+                ["dot_clean", str(self.package_env_config["IPP_SOURCE_DIR"])]
             )
         except Exception:
             # dot_clean may not be available; continue without it
