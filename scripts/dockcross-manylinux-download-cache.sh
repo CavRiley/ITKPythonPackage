@@ -29,6 +29,7 @@ usage()
 # Required environment variables
 required_vars=(
   ITK_GIT_TAG
+  ITK_PACKAGE_VERSION
   ITKPYTHONPACKAGE_ORG
   ITKPYTHONPACKAGE_TAG
   MANYLINUX_VERSION
@@ -36,12 +37,17 @@ required_vars=(
 )
 
 # Sanity Validation loop
+_missing_required=0
 for v in "${required_vars[@]}"; do
   if [ -z "${!v:-}" ]; then
+    _missing_required=1
     echo "ERROR: Required environment variable '$v' is not set or empty."
-    exit 1
   fi
 done
+if [ $_missing_required -ne 0 ]; then
+    exit 1
+fi
+unset _missing_required
 
 
 FORWARD_ARGS=("$@") # Store arguments to forward them later
@@ -87,22 +93,19 @@ TARBALL_NAME="ITKPythonBuilds-linux${TARBALL_SPECIALIZATION}.tar"
 if [[ ! -f ${TARBALL_NAME}.zst ]]; then
   echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst"
   curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O
+  if [ $? -ne 0 ]; then
+    echo "FAILED Download:"
+    echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
+    exit 1
+  fi
 fi
 if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
   echo "ERROR: can not find required binary './${TARBALL_NAME}.zst'"
   exit 255
 fi
 ${unzstd_exe} --long=31 ./${TARBALL_NAME}.zst -o ${TARBALL_NAME}
-if [ "$#" -lt 1 ]; then
-  echo "Extracting all files";
-  tar xf ${TARBALL_NAME}
-else
-  echo "Extracting files relevant for: $1";
-  tar xf ${TARBALL_NAME} ITKPythonPackage/scripts/
-  tar xf ${TARBALL_NAME} ITKPythonPackage/ITK-source/
-  tar xf ${TARBALL_NAME} ITKPythonPackage/oneTBB-prefix/
-  tar xf ${TARBALL_NAME} --wildcards ITKPythonPackage/ITK-$1*
-fi
+echo "Extracting all files";
+tar xf ${TARBALL_NAME}
 rm ${TARBALL_NAME}
 
 ln -s ITKPythonPackage/oneTBB-prefix ./
