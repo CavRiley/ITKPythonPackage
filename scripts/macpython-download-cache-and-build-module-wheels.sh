@@ -43,17 +43,20 @@ if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
 fi
 cd ${DASHBOARD_BUILD_DIRECTORY}
 
-if [ -z "${NO_BREW_UPGRADE}" ] || [ ${NO_BREW_UPGRADE} -ne 1 ]; then
-  # Install dependencies
-  brew update
-  brew install --quiet zstd aria2 gnu-tar doxygen ninja pixi
-  #
-  # As discussed in issue #282, rustup is not needed for successful packaging
-  # but brew eco-system will warn verbosely about it being out of date which
-  # makes identifying other errors more difficult. upgrading rustup silences
-  # the warnings unrelated to package building for easing developer reviews.
-  brew upgrade --quiet cmake rustup
+# NOTE: download phase will install pixi in the DASHBOARD_BUILD_DIRECTORY (which is separate from the pixi
+#       environment used by ITKPYthonPackagbe).
+export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/.pixi
+if [ ! -f  ${PIXI_HOME}/.pixi/bin/pixi ]; then
+  # Install pixi
+  curl -fsSL https://pixi.sh/install.sh | sh
+  # These are the tools needed for cross platform downloads of the ITK build caches stored in https://github.com/InsightSoftwareConsortium/ITKPythonBuilds
+  pixi global install zstd
+  pixi global install aria2
+  pixi global install gnu-tar
+  pixi global install git
+  pixi global install rsync
 fi
+export PATH="${PIXI_HOME}/.pixi/bin:$PATH"
 
 if [[ $(arch) == "arm64" ]]; then
   tarball_arch="-arm64"
@@ -64,12 +67,12 @@ fi
 echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
 local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar.zst
 if [[ ! -f ${local_compress_tarball_name} ]]; then
-        aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
+        pixi run aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
 fi
 local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar
-unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
+pixi run unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
 PATH="$(dirname $(brew list gnu-tar |grep gtar |grep "/bin/")):$PATH"
-gtar xf ${local_tarball_name} --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
+pixi run tar xf ${local_tarball_name} --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
 rm ${local_tarball_name}
 
 # Optional: Update build scripts
@@ -77,14 +80,14 @@ if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
   local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
   if [ ! -d ${local_clone_ipp}/.git ]; then
-    git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
+    pixi run git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
   fi
   pushd ${local_clone_ipp}
-    git checkout "${ITKPYTHONPACKAGE_TAG}"
-    git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
-    git status
+    pixi run git checkout "${ITKPYTHONPACKAGE_TAG}"
+    pixi run git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
+    pixi run git status
   popd
-  rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
+  pixi run rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
 fi
 
 echo "Building module wheels"

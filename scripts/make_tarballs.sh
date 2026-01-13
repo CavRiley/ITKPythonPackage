@@ -3,6 +3,8 @@
 
 PLATFORM=$(uname -s)
 
+ITK_GIT_TAG=${ITK_GIT_TAG:=v6.0b02}
+
 case ${PLATFORM} in
   Darwin)
     PLATFORM_PREFIX="macos"
@@ -23,6 +25,22 @@ case ${PLATFORM} in
     ;;
 esac
 
+# Required environment variables
+required_vars=(
+  ITK_GIT_TAG
+  PLATFORM_PREFIX
+  DASHBOARD_BUILD_DIRECTORY
+
+)
+
+# Sanity Validation loop
+for v in "${required_vars[@]}"; do
+  if [ -z "${!v:-}" ]; then
+    echo "ERROR: Required environment variable '$v' is not set or empty."
+    exit 1
+  fi
+done
+
 if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
   # This is the expected directory for the cache
   mkdir -p ${DASHBOARD_BUILD_DIRECTORY}
@@ -35,24 +53,22 @@ if [ "${script_dir}" !=  "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts"
    exit 1
 fi
 
-if [ ! -f ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi/bin/pixi ]; then
+export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/.pixi
+if [ ! -f ${PIXI_HOME}/bin/pixi ]; then
   #PIXI INSTALL
-  export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi
-  export UV_CACHE_DIR=$XDG_CACHE_HOME/uv
   if [ ! -f  ${PIXI_HOME}/bin/pixi ]; then
     curl -fsSL https://pixi.sh/install.sh | sh
     export PATH="${PIXI_HOME}/bin:$PATH"
   fi
 fi
 
-ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION:=v6.0b02}
-for pyenv in py39; do # py310 py311; do
+for pyenv in py39 py310 py311; do
   cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
-  ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/.pixi/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
+  ${PIXI_HOME}/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
           python3 scripts/build_wheels.py \
           --platform-env ${PLATFORM_PREFIX}-${pyenv} \
           --build-dir-root ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build \
           --itk-source-dir ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK \
-          --itk-git-tag ${ITK_PACKAGE_VERSION} \
+          --itk-git-tag ${ITK_GIT_TAG} \
           --build-itk-tarball-cache
 done
