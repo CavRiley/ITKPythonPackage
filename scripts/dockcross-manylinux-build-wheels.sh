@@ -42,13 +42,19 @@ required_vars=(
   ITKPYTHONPACKAGE_TAG
 )
 # Sanity Validation loop
+_missing_required=0
 for v in "${required_vars[@]}"; do
   if [ -z "${!v:-}" ]; then
+    _missing_required=1
     echo "ERROR: Required environment variable '$v' is not set or empty."
-    exit 1
   fi
 done
+if [ $_missing_required -ne 0 ]; then
+    exit 1
+fi
+unset _missing_required
 
+mkdir -p ${_ipp_dir}/build
 _local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
 # Generate dockcross scripts
 $OCI_EXE run \
@@ -64,8 +70,6 @@ CONTAINER_ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 HOST_PACKAGE_DIST=${_ipp_dir}/dist
 mkdir -p ${HOST_PACKAGE_DIST}
 
-
-
 DOCKER_ARGS="  -v ${_ipp_dir}/dist:${CONTAINER_WORK_DIR}/dist/ "
 if [ "${ITK_SOURCE_DIR}" != "" ]; then
   DOCKER_ARGS+=" -v${ITK_SOURCE_DIR}:${CONTAINER_ITK_SOURCE_DIR} "
@@ -73,13 +77,11 @@ fi
 DOCKER_ARGS+=" -e PYTHONUNBUFFERED=1 " # Turn off buffering of outputs in python
 
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=" --build-itk-tarball-cache --no-cleanup "}
+# To build tarballs in manylinux, use 'export BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache --no-cleanup"'
+BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""} # No tarball by default
 
-#If command line argument given, then use them
-if [ $# -ge 1 ]; then
-  PY_ENVS="$@"
-else
-  PY_ENVS="3.9 3.10 3.11"
-fi
+# If args are given, use them. Otherwise use default python environments
+PY_ENVS=("${@:-py39 py310 py311}")
 
 # When building ITK wheels, --module-source-dir, --module-dependancies-root-dir, and --itk-module-deps to be empty
 cmd=$(echo bash -x ${_local_dockercross_script} \
@@ -92,6 +94,7 @@ cmd=$(echo bash -x ${_local_dockercross_script} \
      TARGET_ARCH=\"${TARGET_ARCH}\" \
      ITKPYTHONPACKAGE_ORG=\"${ITKPYTHONPACKAGE_ORG}\" \
      ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_ORG}\" \
+     BUILD_WHEELS_EXTRA_FLAGS=\"${BUILD_WHEELS_EXTRA_FLAGS}\" \
      /bin/bash -x ${CONTAINER_WORK_DIR}/scripts/docker_build_environment_driver.sh
 )
 echo "RUNNING: $cmd"

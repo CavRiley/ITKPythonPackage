@@ -26,15 +26,14 @@ CONTAINER_PACKAGE_DIST=${CONTAINER_WORK_DIR}/dist
 BUILD_DIR_ROOT=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
 ITK_SOURCE_DIR=${ITK_SOURCER_DIR:=${BUILD_DIR_ROOT}/ITK}
 
-# Set BUILD_WHEELS_EXTRA_FLAGS="" to disable building the tarball or force cleanup
-BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=" --build-itk-tarball-cache "}
+BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""}
 
 echo "BUILD FOR ${PY_ENVS}"
 
-for pyver in ${PY_ENVS}; do
-  py_vername=$(echo ${pyver} |sed 's/\.//g')
+for py_indicator in ${PY_ENVS}; do
+  py_squashed_numeric=$(echo "${py_indicator}" |sed 's/py//g' |sed 's/cp//g' |sed 's/\.//g')
   manylinux_vername=$(echo ${MANYLINUX_VERSION} |sed 's/_//g')
-  PIXI_ENV="manylinux${manylinux_vername}-py${py_vername}"
+  PIXI_ENV="manylinux${manylinux_vername}-py${py_squashed_numeric}"
 
   # Use pixi to ensure all required tools are installed and
   # visible in the PATH
