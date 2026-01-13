@@ -70,7 +70,7 @@ if [ ! -f ${PIXI_HOME}/bin/pixi ]; then
   fi
 fi
 
-for pyenv in "${pyenvs[@]}"; do
+for pyenv in ${pyenvs[@]}; do
   cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
   ${PIXI_HOME}/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
           python3 scripts/build_wheels.py \
