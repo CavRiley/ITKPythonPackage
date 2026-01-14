@@ -1,13 +1,46 @@
+#!/usr/bin/env bash
 # NOTES: Building tarballs requires specific pathing for supporting github CI
 #        workflows
 
-
-ITK_GIT_TAG=${ITK_GIT_TAG:=v6.0b02}
+script_dir=$(cd $(dirname $0) || exit 1; pwd)
+_ipp_dir=$(dirname ${script_dir})
 
 # If args are given, use them. Otherwise use default python environments
 pyenvs=("${@:-py39 py310 py311}")
 
+# Otherwise process mac and linux based on uname
 
+BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache "
+if [ -z "${ITK_GIT_TAG}" ]; then
+  DEFAULT_ITK_GIT_TAG=v6.0b02
+  echo "============================================================================="
+  echo "============================================================================="
+  for i in x x x x x x x x x x x x x x x x x x x x x x x x x x x x x; do
+    echo "===== WARNING: ITK_GIT_TAG not set, so defaulting to ${DEFAULT_ITK_GIT_TAG}"
+  done
+  echo "============================================================================="
+  echo "============================================================================="
+fi
+ITK_GIT_TAG=${ITK_GIT_TAG:=${DEFAULT_ITK_GIT_TAG}}
+
+## --
+#  --
+#  --
+#  --
+# Short circuit builds to use dockercross if MANYLINUX_VERSION is requested
+if [ ! -z "${MANYLINUX_VERSION}" ]; then
+  # Need to explicitly request to  --build-itk-tarball-cache
+  ITK_GIT_TAG=${ITK_GIT_TAG} \
+  MANYLINUX_VERSION=${MANYLINUX_VERSION} \
+    bash ${_ipp_dir}/scripts/dockcross-manylinux-build-wheels.sh \
+         "${pyenvs[@]}"
+  exit $?
+fi
+
+## --
+#  --
+#  --
+#  --
 case "$(uname -s)" in
   Darwin)
     PLATFORM_PREFIX="macos"
@@ -50,10 +83,9 @@ fi
 unset _missing_required
 
 if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
-  # This is the expected directory for the cache
+  # This is the expected directory for the cache, It may require creation with administrator credentials
   mkdir -p ${DASHBOARD_BUILD_DIRECTORY}
 fi
-script_dir=$(cd $(dirname $0) || exit 1; pwd)
 if [ "${script_dir}" !=  "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts" ]; then
    echo "ERROR: Github CI requires rigid directory structure"
    echo "  RUN: git checkout git@github.com:InsightSoftwareConsortium/ITKPythonPackage.git ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage"
@@ -73,10 +105,10 @@ fi
 for pyenv in ${pyenvs[@]}; do
   cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
   ${PIXI_HOME}/bin/pixi run -e ${PLATFORM_PREFIX}-${pyenv} \
-          python3 scripts/build_wheels.py \
+          python3 ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py \
           --platform-env ${PLATFORM_PREFIX}-${pyenv} \
           --build-dir-root ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build \
           --itk-source-dir ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK \
           --itk-git-tag ${ITK_GIT_TAG} \
-          --build-itk-tarball-cache
+          ${BUILD_WHEELS_EXTRA_FLAGS}
 done
