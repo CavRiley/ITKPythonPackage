@@ -10,6 +10,7 @@ pyenvs=("${@:-py39 py310 py311}")
 
 # Otherwise process mac and linux based on uname
 
+# Need to explicitly request to  --build-itk-tarball-cache
 BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache "
 if [ -z "${ITK_GIT_TAG}" ]; then
   DEFAULT_ITK_GIT_TAG=v6.0b02
@@ -29,7 +30,6 @@ ITK_GIT_TAG=${ITK_GIT_TAG:=${DEFAULT_ITK_GIT_TAG}}
 #  --
 # Short circuit builds to use dockercross if MANYLINUX_VERSION is requested
 if [ ! -z "${MANYLINUX_VERSION}" ]; then
-  # Need to explicitly request to  --build-itk-tarball-cache
   ITK_GIT_TAG=${ITK_GIT_TAG} \
   MANYLINUX_VERSION=${MANYLINUX_VERSION} \
     bash ${_ipp_dir}/scripts/dockcross-manylinux-build-wheels.sh \
