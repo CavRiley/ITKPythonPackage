@@ -1,9 +1,5 @@
 #!/bin/bash
 
-CONTAINER_WORK_DIR=/work
-cd ${CONTAINER_WORK_DIR}
-
-
 # Required environment variables
 required_vars=(
   ITK_GIT_TAG
@@ -15,16 +11,24 @@ required_vars=(
   PY_ENVS
 )
 # Sanity Validation loop
+_missing_required=0
 for v in "${required_vars[@]}"; do
   if [ -z "${!v:-}" ]; then
+    _missing_required=1
     echo "ERROR: Required environment variable '$v' is not set or empty."
-    exit 1
   fi
 done
+if [ $_missing_required -ne 0 ]; then
+    exit 1
+fi
+unset _missing_required
 
-CONTAINER_PACKAGE_DIST=${CONTAINER_WORK_DIR}/dist
-BUILD_DIR_ROOT=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
-ITK_SOURCE_DIR=${ITK_SOURCER_DIR:=${BUILD_DIR_ROOT}/ITK}
+CONTAINER_WORK_DIR=/work
+cd ${CONTAINER_WORK_DIR}
+CONTAINER_PACKAGE_BUILD_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
+CONTAINER_PACKAGE_SCRIPTS_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage
+CONTAINER_PACKAGE_DIST=${CONTAINER_PACKAGE_BUILD_DIR}/dist
+ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""}
 
@@ -37,15 +41,16 @@ for py_indicator in ${PY_ENVS}; do
 
   # Use pixi to ensure all required tools are installed and
   # visible in the PATH
-  export PIXI_HOME=${CONTAINER_WORK_DIR}/.pixi
+  export PIXI_HOME=${CONTAINER_PACKAGE_SCRIPTS_DIR}/.pixi
   export PATH=${PIXI_HOME}/bin:${PATH}
-  python3.12 ${CONTAINER_WORK_DIR}/scripts/install_pixi.py --platform-env ${PIXI_ENV}
+  python3.12 ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/install_pixi.py --platform-env ${PIXI_ENV}
 
+  cd ${CONTAINER_PACKAGE_SCRIPTS_DIR}
   pixi run -e ${PIXI_ENV} python3 \
-    ${CONTAINER_WORK_DIR}/scripts/build_wheels.py \
+    ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \
     --platform-env ${PIXI_ENV} \
     ${BUILD_WHEELS_EXTRA_FLAGS} \
-   --build-dir-root ${BUILD_DIR_ROOT} \
+   --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
    --itk-source-dir ${ITK_SOURCE_DIR} \
    --itk-git-tag ${ITK_GIT_TAG} \
    --manylinux-version ${MANYLINUX_VERSION}

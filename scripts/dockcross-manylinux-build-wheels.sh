@@ -56,6 +56,8 @@ unset _missing_required
 
 mkdir -p ${_ipp_dir}/build
 _local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
+cd $(dirname ${_ipp_dir})
+
 # Generate dockcross scripts
 $OCI_EXE run \
              --rm docker.io/dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG} > ${_local_dockercross_script}
@@ -63,21 +65,22 @@ chmod u+x ${_local_dockercross_script}
 
 # Build wheels in dockcross environment
 CONTAINER_WORK_DIR=/work
-CONTAINER_PACKAGE_DIST=${CONTAINER_WORK_DIR}/dist
-CONTAINER_PACKAGE_BUILD_DIR=${CONTAINER_WORK_DIR}/ITK-source
+CONTAINER_PACKAGE_BUILD_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
+CONTAINER_PACKAGE_SCRIPTS_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage
 CONTAINER_ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 
-HOST_PACKAGE_DIST=${_ipp_dir}/dist
-mkdir -p ${HOST_PACKAGE_DIST}
+HOST_PACKAGE_SCRIPTS_DIR=${_ipp_dir}
+HOST_PACKAGE_BUILD_DIR=$(dirname ${_ipp_dir})/ITKPythonPackage-manylinux${MANYLINUX_VERSION}-build
+mkdir -p ${HOST_PACKAGE_BUILD_DIR}
 
-DOCKER_ARGS="  -v ${_ipp_dir}/dist:${CONTAINER_WORK_DIR}/dist/ "
+DOCKER_ARGS="  -v ${HOST_PACKAGE_BUILD_DIR}:${CONTAINER_PACKAGE_BUILD_DIR} "
+DOCKER_ARGS+=" -v ${HOST_PACKAGE_SCRIPTS_DIR}:${CONTAINER_PACKAGE_SCRIPTS_DIR} "
 if [ "${ITK_SOURCE_DIR}" != "" ]; then
   DOCKER_ARGS+=" -v${ITK_SOURCE_DIR}:${CONTAINER_ITK_SOURCE_DIR} "
 fi
 DOCKER_ARGS+=" -e PYTHONUNBUFFERED=1 " # Turn off buffering of outputs in python
 
-BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=" --build-itk-tarball-cache --no-cleanup "}
-# To build tarballs in manylinux, use 'export BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache --no-cleanup"'
+# To build tarballs in manylinux, use 'export BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache "'
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""} # No tarball by default
 
 # If args are given, use them. Otherwise use default python environments
@@ -95,7 +98,7 @@ cmd=$(echo bash -x ${_local_dockercross_script} \
      ITKPYTHONPACKAGE_ORG=\"${ITKPYTHONPACKAGE_ORG}\" \
      ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_ORG}\" \
      BUILD_WHEELS_EXTRA_FLAGS=\"${BUILD_WHEELS_EXTRA_FLAGS}\" \
-     /bin/bash -x ${CONTAINER_WORK_DIR}/scripts/docker_build_environment_driver.sh
+     /bin/bash -x ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/docker_build_environment_driver.sh
 )
 echo "RUNNING: $cmd"
 eval $cmd
