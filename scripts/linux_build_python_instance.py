@@ -75,7 +75,11 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
         if manylinux_ver:
             # Repair all produced wheels with auditwheel for packages with so elements (starts with itk_)
             whl = None
-            for whl in (self.build_dir_root / "dist").glob("itk_*linux_*.whl"):
+            # cp39-cp39-linux itk_segmentation-6.0.0b2-cp39-cp39-linux_x86_64.whl
+            cp_prefix: str = self.platform_env.replace("py", "cp").replace(".", "")
+            binary_wheel_glob_pattern: str = "itk_*-*{cp_prefix}*-linux_*.whl"
+            dist_path: Path = self.build_dir_root / "dist"
+            for whl in dist_path.glob(binary_wheel_glob_pattern):
                 if str(whl).startswith("itk-"):
                     print(
                         f"Skipping the itk-meta wheel that has nothing to fixup {whl}"
@@ -86,9 +90,8 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             # Retag meta-wheel: Special handling for the itk meta wheel to adjust tag
             # auditwheel does not process this "metawheel" correctly since it does not
             # have any native SO's.
-            for metawhl in list(
-                (self.build_dir_root / "dist").glob("itk-*linux_*.whl")
-            ):
+            meta_wheel_glob_pattern: str = "itk-*-*{cp_prefix}*-linux_*.whl"
+            for metawhl in dist_path.glob(meta_wheel_glob_pattern):
                 # Unpack, edit WHEEL tag, repack
                 metawheel_dir = self.build_dir_root / "metawheel"
                 metawheel_dir.mkdir(parents=True, exist_ok=True)
