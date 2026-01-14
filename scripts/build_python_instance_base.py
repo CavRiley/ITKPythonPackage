@@ -860,11 +860,11 @@ class BuildPythonInstanceBase(ABC):
                 str(tar_path),
                 "--exclude=*.o",  # Do not include object files
                 "--exclude=*.whl",  # Do not include built wheels
-                "--exclude=*/dist/*", # Do not include the dist whl output directory
-                "--exclude=*/wheelbuilds/*", # Do not include the wheelbuild support directory
+                "--exclude=*/dist/*",  # Do not include the dist whl output directory
+                "--exclude=*/wheelbuilds/*",  # Do not include the wheelbuild support directory
                 "--exclude=*/__pycache__/*",  # Do not include __pycache__
-                "--exclude=install_manifest_*.txt", # Do not include install manifest files
-                "--excldue=build.ninja",
+                "--exclude=install_manifest_*.txt",  # Do not include install manifest files
+                "--exclude=build.ninja",
                 "--exclude=.ninja_deps",
                 "--exclude=.ninja_long",
                 "--exclude=._*",  # Exclude mac dot files
