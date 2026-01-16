@@ -19,6 +19,7 @@
 script_dir=$(cd $(dirname $0) || exit 1; pwd)
 _ipp_dir=$(dirname ${script_dir})
 
+OCI_EXE=${OCI_EXE:=docker}
 
 if [[ -n ${ITK_MODULE_PREQ} ]]; then
   echo "Building module dependencies ${ITK_MODULE_PREQ}"
@@ -88,7 +89,7 @@ else
   # Generate dockcross scripts
   _local_dockercross_script=${_ipp_dir}/build/runner_module_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
   $OCI_EXE run \
-               --rm ${CONTAINER_SOURCE} > ${_local_dockercross_script}
+        --rm ${CONTAINER_SOURCE} > ${_local_dockercross_script}
   chmod u+x ${_local_dockercross_script}
 
   # Build wheels
@@ -97,6 +98,6 @@ else
     "/ITKPythonPackage/scripts/internal/manylinux-build-module-wheels.sh" "$@"
 fi
 
-if [[ -z ${ITK_MODULE_NO_CLEANUP} ]]; then
-  source "${script_dir}/dockcross-manylinux-cleanup.sh"
-fi
+#if [[ -z ${ITK_MODULE_NO_CLEANUP} ]]; then
+#  source "${script_dir}/dockcross-manylinux-cleanup.sh"
+#fi
