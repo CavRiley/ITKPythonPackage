@@ -22,9 +22,9 @@ class BuildManager:
         self._load_if_exists()
 
     # ---- Public API ----
-    def run_step(self, step_name: str, func) -> None:
+    def run_step(self, step_name: str, func, force_rerun=False) -> None:
         entry = self.report["steps"].setdefault(step_name, self._new_step_entry())
-        if entry.get("status") == "done":
+        if entry.get("status") == "done" and not force_rerun:
             # Already completed in a previous run; skip
             return
 

@@ -235,7 +235,12 @@ class BuildPythonInstanceBase(ABC):
             print(
                 f"Running build step: {build_step_name}:  recording status in {build_report_fn}"
             )
-            build_manager.run_step(build_step_name, build_step_func)
+            # always force_rerun of the tarball step if requested
+            build_manager.run_step(
+                build_step_name,
+                build_step_func,
+                force_rerun=("tarball_cache" in build_step_name),
+            )
             build_manager.save()
             print(
                 f"Build step {build_step_name} completed.  Edit {build_report_fn} to rerun step."
