@@ -552,7 +552,7 @@ def get_default_platform_build(default_python_version: str = "py311") -> str:
         return from_pixi
     else:
         if sys.platform == "darwin":
-            return f"macos-{default_python_version}"
+            return f"macosx-{default_python_version}"
         elif sys.platform.startswith("linux"):
             return f"linux-{default_python_version}"
         elif sys.platform == "win32":

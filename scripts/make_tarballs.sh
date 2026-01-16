@@ -44,7 +44,7 @@ fi
 #  --
 case "$(uname -s)" in
   Darwin)
-    PLATFORM_PREFIX="macos"
+    PLATFORM_PREFIX="macosx"
     DASHBOARD_BUILD_DIRECTORY=${DASHBOARD_BUILD_DIRECTORY:=/Users/svc-dashboard/D/P}
     ;;
   Linux)

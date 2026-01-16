@@ -83,15 +83,15 @@ libc = { family = "glibc", version = "2.28" }
 # macOS-specific feature
 ########################################
 
-[feature.macos-build]
+[feature.macosx-build]
 platforms = ["osx-64", "osx-arm64"]
 system-requirements = { macos = "10.7" }
 
 # delocate is a Python tool; cxx-compiler is the macOS toolchain meta-package
-[feature.macos-build.pypi-dependencies]
+[feature.macosx-build.pypi-dependencies]
 delocate = "*"
 
-[feature.macos-build.dependencies]
+[feature.macosx-build.dependencies]
 cxx-compiler = "==1.10.0"  # XCode 16.0 before castxml required updates
 c-compiler = "==1.10.0"    # XCode 16.0 before castxml required updates
 #libhwloc = "*" # Needed for tbb
@@ -163,9 +163,9 @@ manylinux228-py311 = [
 ]
 
 # macOS build env (both Intel and Apple Silicon)
-macos-py39 = ["py39", "build-dev-tools", "python-dev-pkgs", "macos-build"]
-macos-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "macos-build"]
-macos-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "macos-build"]
+macosx-py39 = ["py39", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
+macosx-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
+macosx-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 
 # Windows build env
 windows-py39 = ["py39", "build-dev-tools", "python-dev-pkgs", "windows-build"]

@@ -138,7 +138,7 @@ def build_wheels_main() -> None:
                linux-py39, linux-py310, linux-py311,
                manylinux228-py39, manylinux228-py310, manylinux228-py311,
                windows-py39, windows-py310, windows-py311,
-               macos-py39, macos-py310, macos-py311
+               macosx-py39, macosx-py310, macosx-py311
             """
         ),
     )
@@ -298,7 +298,7 @@ def build_wheels_main() -> None:
 
     if os_name == "darwin":
         parser.add_argument(
-            "--macos-deployment-target",
+            "--macosx-deployment-target",
             type=str,
             default=remote_module_build_dict["MACOSX_DEPLOYMENT_TARGET"],
             help="""

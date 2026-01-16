@@ -98,9 +98,9 @@ for py_indicator in ${args[@]}; do
    # The following line is to convert "py3.11|py311|cp311|3.11" -> py311 normalized form
    py_squashed_numeric=$(echo "${py_indicator}" |sed 's/py//g' |sed 's/cp//g' |sed 's/\.//g')
    pyenv=py${py_squashed_numeric}
-   pixi run -e macos-${pyenv} -- python \
+   pixi run -e macosx-${pyenv} -- python \
            ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py \
-           --platform-env macos-${pyenv} \
+           --platform-env macosx-${pyenv} \
            --lib-paths '' '' \
            --module-source-dir ${MODULE_SRC_DIRECTORY} \
            --module-dependencies-root-dir ${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES \
@@ -116,5 +116,5 @@ for py_indicator in ${args[@]}; do
            --no-use-sudo \
            --no-use-ccache
 
-           #Let this be automatically selected --macos-deployment-target 10.7 \
+           #Let this be automatically selected --macosx-deployment-target 10.7 \
 done
