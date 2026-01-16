@@ -548,8 +548,17 @@ def safe_copy_if_different(src: Path, dst: Path) -> None:
 
 def get_default_platform_build(default_python_version: str = "py311") -> str:
     from_pixi = os.environ.get("PIXI_ENVIRONMENT_NAME", None)
-    if from_pixi:
-        return from_pixi
+    if from_pixi and "-" in from_pixi:
+        manylinux_pixi_to_pattern_renaming: dict[str, str] = {
+            "manylinux1": "manylinux1",
+            "manylinux2014": "manylinux2014",
+            "manylinux228": "manylinux_2_28",
+            "manylinux234": "manylinux_2_34",
+        }
+        platform_prefix: str = from_pixi.split("-")[0]
+        python_version: str = from_pixi.split("-")[1]
+        manylinux_pixi_to_pattern_renaming.get(platform_prefix, platform_prefix)
+        return f"{platform_prefix}-${python_version}"
     else:
         if sys.platform == "darwin":
             return f"macosx-{default_python_version}"
