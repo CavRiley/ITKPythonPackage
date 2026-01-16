@@ -48,6 +48,9 @@ do
   esac
 done
 
+#For backwards compatibility when the ITK_GIT_TAG was required to match the ITK_PACKAGE_VERSION
+ITK_GIT_TAG=${ITK_GIT_TAG:=${ITK_PACKAGE_VERSION}}
+
 # -----------------------------------------------------------------------
 # Download and extract cache
 
@@ -56,6 +59,7 @@ curl -L https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPacka
 chmod u+x dockcross-manylinux-download-cache.sh
 _download_cmd=$(echo \
 ITK_GIT_TAG=${ITK_GIT_TAG} \
+ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} \
 ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
 ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
 MANYLINUX_VERSION=${MANYLINUX_VERSION} \
