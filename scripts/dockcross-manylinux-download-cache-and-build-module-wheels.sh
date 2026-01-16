@@ -64,6 +64,7 @@ ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
 ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
 MANYLINUX_VERSION=${MANYLINUX_VERSION} \
 TARGET_ARCH=${TARGET_ARCH} \
+bash -x \
 ${download_script_dir}/dockcross-manylinux-download-cache.sh $1
 )
 echo "Running: ${_download_cmd}"
