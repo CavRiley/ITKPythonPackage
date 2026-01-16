@@ -82,7 +82,6 @@ if ($env:ITKPYTHONPACKAGE_TAG) {
 
   Remove-Item -Recurse -Force IPP/scripts/
   Copy-Item -Recurse IPP-tmp/scripts IPP/
-  Copy-Item IPP-tmp/requirements-dev.txt IPP/
   Remove-Item -Recurse -Force IPP-tmp/
   popd
 }
