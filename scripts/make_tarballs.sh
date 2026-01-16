@@ -30,6 +30,7 @@ ITK_GIT_TAG=${ITK_GIT_TAG:=${DEFAULT_ITK_GIT_TAG}}
 #  --
 # Short circuit builds to use dockercross if MANYLINUX_VERSION is requested
 if [ ! -z "${MANYLINUX_VERSION}" ]; then
+  BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS} \
   ITK_GIT_TAG=${ITK_GIT_TAG} \
   MANYLINUX_VERSION=${MANYLINUX_VERSION} \
     bash ${_ipp_dir}/scripts/dockcross-manylinux-build-wheels.sh \
