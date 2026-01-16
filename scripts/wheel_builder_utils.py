@@ -557,7 +557,9 @@ def get_default_platform_build(default_python_version: str = "py311") -> str:
         }
         platform_prefix: str = from_pixi.split("-")[0]
         python_version: str = from_pixi.split("-")[1]
-        manylinux_pixi_to_pattern_renaming.get(platform_prefix, platform_prefix)
+        platform_prefix = manylinux_pixi_to_pattern_renaming.get(
+            platform_prefix, platform_prefix
+        )
         return f"{platform_prefix}-${python_version}"
     else:
         if sys.platform == "darwin":
