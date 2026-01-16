@@ -96,11 +96,11 @@ if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
   exit 255
 fi
 ${unzstd_exe} --long=31 ./${TARBALL_NAME}.zst -o ${TARBALL_NAME}
-echo "Extracting all files";
+
+current_dir=$(pwd)
+echo "Extracting all cache files from ${TARBALL_NAME} in ${current_dir}";
 tar xf ${TARBALL_NAME}
 rm ${TARBALL_NAME}
-
-ln -s ITKPythonPackage/oneTBB-prefix ./
 
 # -----------------------------------------------------------------------
 # Optional: Update build scripts
@@ -111,20 +111,20 @@ ln -s ITKPythonPackage/oneTBB-prefix ./
 
 if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
-  git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "IPP-tmp"
+  git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${current_dir}/IPP-tmp"
 
-  pushd IPP-tmp/
-  git checkout "${ITKPYTHONPACKAGE_TAG}"
-  git status
+  pushd "${current_dir}/IPP-tmp/"
+    git checkout "${ITKPYTHONPACKAGE_TAG}"
+    git status
   popd
 
-  rm -rf ITKPythonPackage/scripts/
-  cp -r IPP-tmp/scripts ITKPythonPackage/
-  rm -rf IPP-tmp/
+  rm -rf ${current_dir}/ITKPythonPackage/scripts/
+  cp -r  ${current_dir}/IPP-tmp/scripts ${current_dir}/ITKPythonPackage/scripts
+  rm -rf ${current_dir}/IPP-tmp/
 fi
 
-if [[ ! -f ./ITKPythonPackage/scripts/dockcross-manylinux-build-module-wheels.sh ]]; then
-  echo "ERROR: can not find required binary './ITKPythonPackage/scripts/dockcross-manylinux-build-module-wheels.sh'"
+if [[ ! -f ${current_dir}/ITKPythonPackage/scripts/dockcross-manylinux-build-module-wheels.sh ]]; then
+  echo "ERROR: can not find required binary '${current_dir}/ITKPythonPackage/scripts/dockcross-manylinux-build-module-wheels.sh'"
   exit 255
 fi
 
