@@ -862,8 +862,8 @@ class BuildPythonInstanceBase(ABC):
                 "-cf",
                 str(tar_path),
                 "--exclude=*.o",  # Do not include object files
-                "--exclude=*.whl",  # Do not include built wheels
-                "--exclude=*/dist/*",  # Do not include the dist whl output directory
+                # We need the .whl files in the cache for testing"--exclude=*.whl",  # Do not include built wheels
+                # We need the .whl files in the cache for testing"--exclude=*/dist/*",  # Do not include the dist whl output directory
                 "--exclude=*/wheelbuilds/*",  # Do not include the wheelbuild support directory
                 "--exclude=*/__pycache__/*",  # Do not include __pycache__
                 "--exclude=install_manifest_*.txt",  # Do not include install manifest files
