@@ -199,7 +199,7 @@ def detect_platform() -> tuple[str, str]:
     arch = machine
     if os_name == "darwin":
         if machine in ("x86_64",):
-            arch = "x64"
+            arch = "x86_64"
         elif machine in ("arm64", "aarch64"):
             arch = "arm64"
     elif os_name == "linux":
