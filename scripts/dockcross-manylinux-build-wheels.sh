@@ -96,7 +96,7 @@ cmd=$(echo bash -x ${_local_dockercross_script} \
      IMAGE_TAG=\"${IMAGE_TAG}\" \
      TARGET_ARCH=\"${TARGET_ARCH}\" \
      ITKPYTHONPACKAGE_ORG=\"${ITKPYTHONPACKAGE_ORG}\" \
-     ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_ORG}\" \
+     ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_TAG}\" \
      BUILD_WHEELS_EXTRA_FLAGS=\"${BUILD_WHEELS_EXTRA_FLAGS}\" \
      /bin/bash -x ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/docker_build_environment_driver.sh
 )
