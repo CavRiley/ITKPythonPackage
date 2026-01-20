@@ -65,6 +65,16 @@ class BuildPythonInstanceBase(ABC):
 
         self.package_env_config = package_env_config
 
+        # declare this dict before self.prepare_build_env() or dict will be empty in later functions
+        self.venv_info_dict = {
+            # Filled in for each platform and each pyenvs
+            # "python_executable": None,
+            # "python_include_dir": None,
+            # "python_library": None,
+            # "venv_bin_path": None,
+            # "venv_base_dir": None,
+        }
+
         with open(
             IPP_BuildWheelsSupport_DIR / "WHEEL_NAMES.txt",
             "r",
@@ -156,15 +166,6 @@ class BuildPythonInstanceBase(ABC):
                 "SKBUILD:BOOL": "ON",
             }
         )
-
-        self.venv_info_dict = {
-            # Filled in for each platform and each pyenvs
-            # "python_executable": None,
-            # "python_include_dir": None,
-            # "python_library": None,
-            # "venv_bin_path": None,
-            # "venv_base_dir": None,
-        }
 
     def update_venv_itk_build_configurations(self) -> None:
         # TODO: Make this better later currently needs to be called after each platforms update of venv_info_dict

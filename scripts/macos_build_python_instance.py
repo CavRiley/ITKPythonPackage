@@ -185,12 +185,16 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
         self.remove_apple_double_files()
         # macOS fix-up with delocate (only needed for x86_64)
         if self.package_env_config["ARCH"] != "arm64":
-            delocate_listdeps = (
-                self.venv_info_dict["venv_bin_path"] / "delocate-listdeps"
-            )
-            delocate_wheel = self.venv_info_dict["venv_bin_path"] / "delocate-wheel"
-            self.echo_check_call([str(delocate_listdeps), str(filepath)])
-            self.echo_check_call([str(delocate_wheel), str(filepath)])
+            venv_bin_path = self.venv_info_dict.get("venv_bin_path", None)
+            if venv_bin_path:
+                delocate_listdeps = (
+                    f"{venv_bin_path}/delocate-listdeps"
+                )
+                delocate_wheel = f"{venv_bin_path}/delocate-wheel"
+                self.echo_check_call([str(delocate_listdeps), str(filepath)])
+                self.echo_check_call([str(delocate_wheel), str(filepath)])
+            else:
+                print("="*20 + "WARNING: Could not find venv binary to delocate wheel" + "="*20)
 
     def remove_apple_double_files(self):
         try:
