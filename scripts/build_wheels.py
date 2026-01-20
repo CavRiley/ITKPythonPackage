@@ -432,7 +432,7 @@ def build_wheels_main() -> None:
     package_env_config["ITKPYTHONPACKAGE_ORG"] = args.itk_pythonpackage_org
     package_env_config["ITKPYTHONPACKAGE_TAG"] = args.itk_pythonpackage_tag
     if os_name == "darwin":
-        package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macos_deployment_target
+        package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macosx_deployment_target
     else:
         package_env_config["MACOSX_DEPLOYMENT_TARGET"] = "RELAVANT_FOR_MACOS_ONLY"
     package_env_config["ITK_MODULE_PREQ"] = args.itk_module_deps
