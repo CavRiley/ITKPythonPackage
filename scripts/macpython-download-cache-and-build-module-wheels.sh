@@ -72,7 +72,13 @@ fi
 local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar
 pixi run unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
 PATH="$(dirname $(brew list gnu-tar |grep gtar |grep "/bin/")):$PATH"
-pixi run tar xf ${local_tarball_name} --warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot
+# Find tar implementation
+if tar --version 2>/dev/null | grep -q "GNU tar"; then
+  TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
+else
+  TAR_FLAGS=()
+fi
+pixi run tar xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
 rm ${local_tarball_name}
 
 # Optional: Update build scripts
