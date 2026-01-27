@@ -118,6 +118,9 @@ The following are environmental variables that define the necessary information 
 # Target architecture (x86_64 or arm64 for macOS) or (x64 or aarch64 for linux)
 TARGET_ARCH=''
 
+# Specify manylinux version if building for manylinux (_2_34, _2_28, 2014)
+MANYLINUX_VERSION=''
+
 # Path to your ITK remote module repository, if not specified then the current directory is used 
 # (make sure the following scripts are in the root of the ITKRemote module if this is not set)
 MODULE_SRC_DIRECTORY=/path/to/ITKRemoteModule
@@ -126,11 +129,11 @@ MODULE_SRC_DIRECTORY=/path/to/ITKRemoteModule
 # Default: /Users/svc-dashboard/D/P
 DASHBOARD_BUILD_DIRECTORY=/path/to/build/directory
 
-# ITK package version tag to build against (GH Action: itk-wheel-tag)
-ITK_PACKAGE_VERSION=v6.0a01
-
 # ITK version to use (branch name or commit hash)
 ITK_GIT_TAG=main
+
+# ITK package version tag to build against (GH Action: itk-wheel-tag)
+ITK_PACKAGE_VERSION=v6.0a01
 
 # ITK prerequisite modules (GH Action: itk-module-deps)
 # This must be formated as `ITKModuleName1@Module1Tag:ITKModuleName2@Module2Tag:...`
@@ -142,9 +145,6 @@ ITKPYTHONPACKAGE_ORG=InsightSoftwareConsortium
 # Optional: Override build scripts with specific tag/branch  (GH Action: itk-python-package-tag)
 # If set, the build scripts will be updated from this tag
 ITKPYTHONPACKAGE_TAG=main
-
-# Specify manylinux version if building for manylinux (_2_34, _2_28, 2014)
-MANYLINUX_VERSION=''
 ```
 
 > [!NOTE]
