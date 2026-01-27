@@ -56,7 +56,7 @@ if [ ! -f  ${PIXI_HOME}/.pixi/bin/pixi ]; then
   pixi global install git
   pixi global install rsync
 fi
-export PATH="${PIXI_HOME}/.pixi/bin:$PATH"
+export PATH="${PIXI_HOME}/bin:$PATH"
 
 if [[ $(arch) == "arm64" ]]; then
   tarball_arch="-arm64"
@@ -67,10 +67,10 @@ fi
 echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
 local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar.zst
 if [[ ! -f ${local_compress_tarball_name} ]]; then
-        pixi run aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
+  aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
 fi
 local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}_${ITK_PACKAGE_VERSION}.tar
-pixi run unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
+unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
 PATH="$(dirname $(brew list gnu-tar |grep gtar |grep "/bin/")):$PATH"
 # Find tar implementation
 if tar --version 2>/dev/null | grep -q "GNU tar"; then
@@ -78,7 +78,7 @@ if tar --version 2>/dev/null | grep -q "GNU tar"; then
 else
   TAR_FLAGS=()
 fi
-pixi run tar xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
+tar xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
 rm ${local_tarball_name}
 
 # Optional: Update build scripts
@@ -86,14 +86,14 @@ if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
   local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
   if [ ! -d ${local_clone_ipp}/.git ]; then
-    pixi run git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
+    git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
   fi
   pushd ${local_clone_ipp}
-    pixi run git checkout "${ITKPYTHONPACKAGE_TAG}"
-    pixi run git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
-    pixi run git status
+    git checkout "${ITKPYTHONPACKAGE_TAG}"
+    git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
+    git status
   popd
-  pixi run rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
+  rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
 fi
 
 echo "Building module wheels"
