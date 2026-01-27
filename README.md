@@ -79,6 +79,127 @@ to target Windows, Linux, and MacOS platforms. See
 [ITKPythonPackage ReadTheDocs](https://itkpythonpackage.readthedocs.io/en/master/Build_ITK_Module_Python_packages.html)
 documentation for more information on building wheels by hand.
 
+### Building ITK External Module Pip Wheels Locally:
+
+#### macOS Prereqs
+
+* brew installed, more information at [brew.sh](https://brew.sh)
+
+With brew installed, run
+
+```shell
+brew install zstd
+```
+
+#### Linux Prereqs
+
+* docker installed, more information at [docker.com](https://www.docker.com/get-started/)
+
+
+#### Setup Instructions
+
+1. Obtain the Build Scripts
+
+Clone the `ITKPythonPackage` repository to access the build scripts:
+
+```shell
+git clone https://github.com/InsightSoftwareConsortium/ITKPythonPackage.git
+cd ITKPythonPackage
+```
+
+> [!NOTE]
+> You can replace `InsightSoftwareConsortium` with a different organization if using a fork.
+
+2. Configure Build Environment
+
+The following are environmental variables that define where to find your module source, which ITK version to build against, and where to store build artifacts.
+
+```shell
+# Target architecture, computed within the build script if not specified
+# (x86_64 or arm64 for macOS)
+# (x64 or aarch64 for linux)
+TARGET_ARCH='x86_64'
+
+# Path to your ITK remote module repository, if not specified then the current directory is used 
+# (make sure the following scripts are in the root of the ITKRemote module if this is not set)
+MODULE_SRC_DIRECTORY=/path/to/ITKRemoteModule
+
+# Directory where build artifacts will be created
+DASHBOARD_BUILD_DIRECTORY=/path/to/build/directory
+
+# ITK version to use (branch name or commit hash)
+ITK_GIT_TAG=main
+
+# ITK requisite modules (GH Action: itk-module-deps)
+# This needs to be formated as
+# `ITKRemoteModuleName1@RemoteModule1Tag:ITKRemoteModuleName2@RemoteModule2Tag:...`
+ITK_MODULE_PREQ=''
+
+# ITK package version tag to build against (GH Action: itk-wheel-tag)
+ITK_PACKAGE_VERSION=v6.0a01
+
+# GitHub organization hosting ITKPythonPackage (GH Action: itk-python-package-org)
+ITKPYTHONPACKAGE_ORG=InsightSoftwareConsortium
+
+# Optional: Override build scripts with specific tag/branch  (GH Action: itk-python-package-tag)
+# If set, the build scripts will be updated from this tag
+ITKPYTHONPACKAGE_TAG=main
+
+# Specify manylinux version if building for manylinux
+MANYLINUX_VERSION=_2_28
+```
+
+> [!NOTE]
+> The variables that can be changed in the `ITKRemoteModuleBuildTestPackageAction` are signaled by `GH Action:`
+
+
+#### Building Wheels
+
+You can run these scripts from any directory. Build artifacts will be created in your specified `DASHBOARD_BUILD_DIRECTORY`.
+
+##### macOS
+
+Build wheels for macOS using the following command:
+
+```shell
+./scripts/macpython-download-cache-and-build-module-wheels.sh cp39 cp310 cp311 cp312
+```
+
+##### Python Version Arguments:
+* Specify one or more Python versions (e.g., `cp39`, `cp310`, `cp311`)
+* The script will build a wheels for each version specified
+
+##### Linux 
+
+Linux builds run inside Docker containers to ensure compatibility with manylinux standards.
+
+Build command:
+```shell
+./scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh cp39 cp310 cp311 cp312
+```
+
+##### Windows
+
+Build wheels for Windows using PowerShell:
+```powershell
+.\scripts\windows-download-cache-and-build-module-wheels.ps1 cp39 cp310 cp311 cp312
+```
+
+
+#### Build Output
+After successful builds you'll find
+
+* ITK proper wheel files (`.whl`) in `${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_build/dist` 
+* ITK remote module wheel files in `${MODULE_SRC_DIRECTORY}/dist`
+
+#### Next Steps
+
+Once you've built the wheels, you can
+
+* Test your wheels locally: `pip install /path/to/your/wheel.whl`
+
+* Upload to PyPI or a private index
+
 ## Frequently Asked Questions
 
 ### What target platforms and architectures are supported?
@@ -86,7 +207,7 @@ documentation for more information on building wheels by hand.
 ITKPythonPackage currently supports building wheels for the following platforms and architectures:
 - Windows 10 x86_64 platforms
 - Windows 11 x86_64 platforms
-- MacOS 15.0+ arm64 platforms
+- MacOS 15.0+ x86_64 and arm64 platforms
 - Linux glibc 2.17+ (E.g. Ubuntu 18.04+) x86_64 platforms
 - Linux glibc 2.28+ (E.g. Ubuntu 20.04+) aarch64 (ARMv8) platforms
 
@@ -147,3 +268,4 @@ If you aren't able to find an answer for your specific case, please start a disc
 -   Free software: Apache Software license
 -   Documentation: <http://itkpythonpackage.readthedocs.org>
 -   Source code: <https://github.com/InsightSoftwareConsortium/ITKPythonPackage>
+ 
