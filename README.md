@@ -76,10 +76,10 @@ for more information.
 For special cases where ITK reusable workflows are not a good fit,
 ITKPythonPackage scripts can be directly used to build Python wheels
 to target Windows, Linux, and MacOS platforms. See
-[ITKPythonPackage ReadTheDocs](https://itkpythonpackage.readthedocs.io/en/master/Build_ITK_Module_Python_packages.html)
+[ITKPythonPackage ReadTheDocs](https://itkpythonpackage.readthedocs.io/en/latest/Build_ITK_Module_Python_packages.html)
 documentation for more information on building wheels by hand.
 
-### Building ITK External Module Pip Wheels Locally:
+## Building ITK Module Wheels Locally:
 
 #### macOS Prereqs
 
@@ -96,7 +96,7 @@ brew install zstd
 * docker installed, more information at [docker.com](https://www.docker.com/get-started/)
 
 
-#### Setup Instructions
+### Setup Instructions
 
 1. Obtain the Build Scripts
 
@@ -112,31 +112,29 @@ cd ITKPythonPackage
 
 2. Configure Build Environment
 
-The following are environmental variables that define where to find your module source, which ITK version to build against, and where to store build artifacts.
+The following are environmental variables that define the necessary information for building ITK proper and remote module wheels.
 
 ```shell
-# Target architecture, computed within the build script if not specified
-# (x86_64 or arm64 for macOS)
-# (x64 or aarch64 for linux)
-TARGET_ARCH='x86_64'
+# Target architecture (x86_64 or arm64 for macOS) or (x64 or aarch64 for linux)
+TARGET_ARCH=''
 
 # Path to your ITK remote module repository, if not specified then the current directory is used 
 # (make sure the following scripts are in the root of the ITKRemote module if this is not set)
 MODULE_SRC_DIRECTORY=/path/to/ITKRemoteModule
 
 # Directory where build artifacts will be created
+# Default: /Users/svc-dashboard/D/P
 DASHBOARD_BUILD_DIRECTORY=/path/to/build/directory
+
+# ITK package version tag to build against (GH Action: itk-wheel-tag)
+ITK_PACKAGE_VERSION=v6.0a01
 
 # ITK version to use (branch name or commit hash)
 ITK_GIT_TAG=main
 
-# ITK requisite modules (GH Action: itk-module-deps)
-# This needs to be formated as
-# `ITKRemoteModuleName1@RemoteModule1Tag:ITKRemoteModuleName2@RemoteModule2Tag:...`
+# ITK prerequisite modules (GH Action: itk-module-deps)
+# This must be formated as `ITKModuleName1@Module1Tag:ITKModuleName2@Module2Tag:...`
 ITK_MODULE_PREQ=''
-
-# ITK package version tag to build against (GH Action: itk-wheel-tag)
-ITK_PACKAGE_VERSION=v6.0a01
 
 # GitHub organization hosting ITKPythonPackage (GH Action: itk-python-package-org)
 ITKPYTHONPACKAGE_ORG=InsightSoftwareConsortium
@@ -145,29 +143,62 @@ ITKPYTHONPACKAGE_ORG=InsightSoftwareConsortium
 # If set, the build scripts will be updated from this tag
 ITKPYTHONPACKAGE_TAG=main
 
-# Specify manylinux version if building for manylinux
-MANYLINUX_VERSION=_2_28
+# Specify manylinux version if building for manylinux (_2_34, _2_28, 2014)
+MANYLINUX_VERSION=''
 ```
 
 > [!NOTE]
 > The variables that can be changed in the `ITKRemoteModuleBuildTestPackageAction` are signaled by `GH Action:`
 
 
-#### Building Wheels
+### Building ITK Proper Wheels
 
-You can run these scripts from any directory. Build artifacts will be created in your specified `DASHBOARD_BUILD_DIRECTORY`.
+The following commands assume you are in the root of the `ITKPythonPackage` repository. Build artifacts will be created in your specified `DASHBOARD_BUILD_DIRECTORY`.
+
+##### Python Version Arguments:
+* Specify one or more Python versions (e.g., `py39`, `py310`, `py311`)
+* The script will build a wheels each version if not specified
 
 ##### macOS
 
-Build wheels for macOS using the following command:
-
 ```shell
-./scripts/macpython-download-cache-and-build-module-wheels.sh cp39 cp310 cp311 cp312
+./scripts/macpython-download-cache-and-build-module-wheels.sh py310
 ```
 
-##### Python Version Arguments:
-* Specify one or more Python versions (e.g., `cp39`, `cp310`, `cp311`)
-* The script will build a wheels for each version specified
+> [!NOTE]
+> When the `MODULE_SRC_DIRECTORY` is not specified and the current directory does not have a `pyproject.toml` file then the remote module build step is skipped
+
+#### Linux
+
+```shell
+./scripts/dockcross-manylinux-download-cache.sh  # Cache download only needs to be done once
+./scripts/dockcross-manylinux-build-wheels.sh py310
+```
+
+##### Windows
+
+Build wheels for Windows using PowerShell:
+```powershell
+.\scripts\windows-download-cache-and-build-module-wheels.ps1 py310
+```
+
+
+#### Build Output
+
+* ITK proper wheel files (`.whl`) in `${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_build/dist`
+
+### Building ITK Remote Module Wheels
+
+> [!IMPORTANT]
+> The `MODULE_SRC_DIRECTORY` needs to be set if the build scripts are not run from the root of the remote module repository
+
+##### macOS
+
+Build wheels for macOS using the same command:
+
+```shell
+./scripts/macpython-download-cache-and-build-module-wheels.sh py310
+```
 
 ##### Linux 
 
@@ -175,24 +206,24 @@ Linux builds run inside Docker containers to ensure compatibility with manylinux
 
 Build command:
 ```shell
-./scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh cp39 cp310 cp311 cp312
+# TODO: this script has not been updated
+./scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh py310
 ```
 
 ##### Windows
 
 Build wheels for Windows using PowerShell:
 ```powershell
-.\scripts\windows-download-cache-and-build-module-wheels.ps1 cp39 cp310 cp311 cp312
+.\scripts\windows-download-cache-and-build-module-wheels.ps1 py310
 ```
 
 
 #### Build Output
 After successful builds you'll find
 
-* ITK proper wheel files (`.whl`) in `${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_build/dist` 
 * ITK remote module wheel files in `${MODULE_SRC_DIRECTORY}/dist`
 
-#### Next Steps
+### Next Steps
 
 Once you've built the wheels, you can
 
