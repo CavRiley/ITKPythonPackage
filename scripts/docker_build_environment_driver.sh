@@ -23,10 +23,15 @@ if [ $_missing_required -ne 0 ]; then
 fi
 unset _missing_required
 
+# -----------------------------------------------------------------------
+# Set up paths
+# These paths are inside the container
+
 CONTAINER_WORK_DIR=/work
 cd ${CONTAINER_WORK_DIR}
 CONTAINER_PACKAGE_BUILD_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
 CONTAINER_PACKAGE_SCRIPTS_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage
+CONTAINER_MODULE_SRC_DIRECTORY=${CONTAINER_WORK_DIR}/$(basename "${MODULE_SRC_DIRECTORY}")
 CONTAINER_PACKAGE_DIST=${CONTAINER_PACKAGE_BUILD_DIR}/dist
 ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 
@@ -50,9 +55,29 @@ for py_indicator in ${PY_ENVS}; do
     ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \
     --platform-env ${PIXI_ENV} \
     ${BUILD_WHEELS_EXTRA_FLAGS} \
-   --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
-   --itk-source-dir ${ITK_SOURCE_DIR} \
-   --itk-git-tag ${ITK_GIT_TAG} \
-   --manylinux-version ${MANYLINUX_VERSION}
+    --module-source-dir "${CONTAINER_MODULE_SRC_DIRECTORY}" \
+    --module-dependencies-root-dir "${CONTAINER_MODULES_ROOT_DIRECTORY}" \
+    --itk-module-deps "${ITK_MODULE_PREQ}" \
+    --no-build-itk-tarball-cache \
+    --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
+    --itk-source-dir ${ITK_SOURCE_DIR} \
+    --itk-git-tag "${ITK_GIT_TAG}" \
+    --manylinux-version "${MANYLINUX_VERSION}" \
+    --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
+    --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
+    --no-use-sudo \
+    --no-use-ccache
 
+  build_status=$?
+  if [ $build_status -ne 0 ]; then
+    echo "ERROR: Build failed for ${py_indicator} with exit code ${build_status}"
+    exit $build_status
+  fi
+
+  echo "Successfully built wheel for ${py_indicator}"
 done
+
+echo ""
+echo "========================================"
+echo "All builds completed successfully!"
+echo "========================================"
