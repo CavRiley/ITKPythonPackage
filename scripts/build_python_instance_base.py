@@ -437,7 +437,7 @@ class BuildPythonInstanceBase(ABC):
         pass
 
     @abstractmethod
-    def fixup_wheel(self, filepath, lib_paths: str = ""):  # pragma: no cover - abstract
+    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False):  # pragma: no cover - abstract
         pass
 
     @abstractmethod
@@ -563,7 +563,7 @@ class BuildPythonInstanceBase(ABC):
 
         # Post-process produced wheels (e.g., delocate on macOS x86_64)
         for wheel in out_dir.glob("*.whl"):
-            self.fixup_wheel(str(wheel))
+            self.fixup_wheel(str(wheel), remote_module_wheel=True)
 
     def build_itk_python_wheels(self):
         # Build wheels

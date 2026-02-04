@@ -160,7 +160,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "") -> None:
+    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
         # Use auditwheel to repair wheels and set manylinux tags
         manylinux_ver = self.package_env_config.get("MANYLINUX_VERSION", "")
         if len(manylinux_ver) > 1:
@@ -178,7 +178,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             cmd += [
                 str(filepath),
                 "-w",
-                str(self.build_dir_root / "dist"),
+                str(self.module_source_dir / "dist") if remote_module_wheel else str(self.build_dir_root / "dist"),
             ]
             # Provide LD_LIBRARY_PATH for oneTBB and common system paths
             extra_lib = str(

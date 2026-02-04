@@ -129,7 +129,7 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "") -> None:
+    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
         # Windows fixup_wheel
         lib_paths = lib_paths.strip()
         lib_paths = lib_paths + ";" if lib_paths else ""

@@ -181,7 +181,7 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "") -> None:
+    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
         self.remove_apple_double_files()
         # macOS fix-up with delocate (only needed for x86_64)
         if self.package_env_config["ARCH"] != "arm64":
