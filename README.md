@@ -79,157 +79,149 @@ to target Windows, Linux, and MacOS platforms. See
 [ITKPythonPackage ReadTheDocs](https://itkpythonpackage.readthedocs.io/en/latest/Build_ITK_Module_Python_packages.html)
 documentation for more information on building wheels by hand.
 
-## Building ITK Module Wheels Locally:
+## Building ITK Wheels Locally
 
-#### macOS Prereqs
+This guide covers building ITK Python wheels locally using the `build_wheels.py` script.
 
-* brew installed, more information at [brew.sh](https://brew.sh)
+### Prerequisites
 
-With brew installed, run
+**All Platforms:**
+- Python 3.9 or later
+- Git
+- Docker for manylinux builds
 
-```shell
-brew install zstd
+### Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/InsightSoftwareConsortium/ITKPythonPackage.git
+   cd ITKPythonPackage
+   ```
+
+2. **Install Pixi** (if not already installed):
+   ```bash
+   curl -fsSL https://pixi.sh/install.sh | bash
+   ```
+
+3. **Build wheels:**
+   ```bash
+   pixi run python3 scripts/build_wheels.py \
+     --platform-env <platform>-<py-version>
+   ```
+
+### Platform Environments
+
+Available `--platform-env` options:
+
+| Platform | Python Versions |
+|----------|----------------|
+| `linux` | py39, py310, py311 |
+| `manylinux228` | py39, py310, py311 |
+| `macosx` | py39, py310, py311 |
+| `windows` | py39, py310, py311 |
+
+**Example:** `--platform-env macosx-py311`
+
+### Basic Usage
+
+#### Build ITK Proper Wheels
+
+Build ITK core library wheels without remote modules:
+
+```bash
+# macOS example
+pixi run python3 scripts/build_wheels.py \
+  --platform-env macosx-py310 \
+  --no-build-itk-tarball-cache
 ```
 
-#### Linux Prereqs
-
-* docker installed, more information at [docker.com](https://www.docker.com/get-started/)
-
-
-### Setup Instructions
-
-1. Obtain the Build Scripts
-
-Clone the `ITKPythonPackage` repository to access the build scripts:
-
-```shell
-git clone https://github.com/InsightSoftwareConsortium/ITKPythonPackage.git
-cd ITKPythonPackage
+```bash
+# Linux example
+pixi run python3 scripts/build_wheels.py \
+  --platform-env linux-py311 \
+  --no-build-itk-tarball-cache
 ```
-
-> [!NOTE]
-> You can replace `InsightSoftwareConsortium` with a different organization if using a fork.
-
-2. Configure Build Environment
-
-The following are environmental variables that define the necessary information for building ITK proper and remote module wheels.
-
-```shell
-# Target architecture (x86_64 or arm64 for macOS) or (x64 or aarch64 for linux)
-TARGET_ARCH=''
-
-# Specify manylinux version if building for manylinux (_2_34, _2_28, 2014)
-MANYLINUX_VERSION=''
-
-# Path to your ITK remote module repository, if not specified then the current directory is used 
-# (make sure the following scripts are in the root of the ITKRemote module if this is not set)
-MODULE_SRC_DIRECTORY=/path/to/ITKRemoteModule
-
-# Directory where build artifacts will be created
-# Default: /Users/svc-dashboard/D/P
-DASHBOARD_BUILD_DIRECTORY=/path/to/build/directory
-
-# ITK version to use (branch name or commit hash)
-ITK_GIT_TAG=main
-
-# ITK package version tag to build against (GH Action: itk-wheel-tag)
-ITK_PACKAGE_VERSION=v6.0a01
-
-# ITK prerequisite modules (GH Action: itk-module-deps)
-# This must be formated as `ITKModuleName1@Module1Tag:ITKModuleName2@Module2Tag:...`
-ITK_MODULE_PREQ=''
-
-# GitHub organization hosting ITKPythonPackage (GH Action: itk-python-package-org)
-ITKPYTHONPACKAGE_ORG=InsightSoftwareConsortium
-
-# Optional: Override build scripts with specific tag/branch  (GH Action: itk-python-package-tag)
-# If set, the build scripts will be updated from this tag
-ITKPYTHONPACKAGE_TAG=main
-```
-
-> [!NOTE]
-> The variables that can be changed in the `ITKRemoteModuleBuildTestPackageAction` are signaled by `GH Action:`
-
-
-### Building ITK Proper Wheels
-
-The following commands assume you are in the root of the `ITKPythonPackage` repository. Build artifacts will be created in your specified `DASHBOARD_BUILD_DIRECTORY`.
-
-##### Python Version Arguments:
-* Specify one or more Python versions (e.g., `py39`, `py310`, `py311`)
-* The script will build a wheels each version if not specified
-
-##### macOS
-
-```shell
-./scripts/macpython-download-cache-and-build-module-wheels.sh py310
-```
-
-> [!NOTE]
-> When the `MODULE_SRC_DIRECTORY` is not specified and the current directory does not have a `pyproject.toml` file then the remote module build step is skipped
-
-#### Linux
-
-```shell
-./scripts/dockcross-manylinux-download-cache.sh  # Cache download only needs to be done once
-./scripts/dockcross-manylinux-build-wheels.sh py310
-```
-
-##### Windows
-
-Build wheels for Windows using PowerShell:
-```powershell
-.\scripts\windows-download-cache-and-build-module-wheels.ps1 py310
-```
-
-
-#### Build Output
-
-* ITK proper wheel files (`.whl`) in `${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_build/dist`
-
-### Building ITK Remote Module Wheels
 
 > [!IMPORTANT]
-> The `MODULE_SRC_DIRECTORY` needs to be set if the build scripts are not run from the root of the remote module repository
+> When `--module-source-dir` is not provided, only ITK proper wheels are built. Remote module build steps are skipped.
 
-##### macOS
+#### Build ITK Remote Module Wheels
 
-Build wheels for macOS using the same command:
+Build wheels for an ITK remote module:
 
-```shell
-./scripts/macpython-download-cache-and-build-module-wheels.sh py310
+```bash
+pixi run python3 scripts/build_wheels.py \
+  --platform-env macosx-py311 \
+  --module-source-dir /path/to/ITKRemoteModule \
+  --itk-package-version v6.0a01 \
+  --no-build-itk-tarball-cache
 ```
 
-##### Linux 
+### Common Options
 
-Linux builds run inside Docker containers to ensure compatibility with manylinux standards.
 
-Build command:
-```shell
-# TODO: this script has not been updated
-./scripts/dockcross-manylinux-download-cache-and-build-module-wheels.sh py310
+| Option | Description | Example                     |
+|--------|-------------|-----------------------------|
+| `--platform-env` | Target platform and Python version | `macosx-py310`              |
+| `--module-source-dir` | Path to remote module to build | `/path/to/module`           |
+| `--module-dependencies-root-dir` | Root directory for module dependencies | `./dependencies`            |
+| `--itk-module-deps` | Remote module dependencies | `Mod1@tag:Mod2@tag`         |
+| `--build-dir-root` | Build directory location | `/tmp/itk-build`            |
+| `--itk-source-dir` | Path to ITK source (reuse existing clone) | `/path/to/ITK`              |
+| `--itk-git-tag` | ITK version/branch/commit to use | `v5.4.0`, `main`, `0ffcaed` |
+| `--itk-package-version` | PEP440 version string for wheels | `v6.0b01`                   |
+| `--itk-pythonpackage-org` | GitHub org for build scripts | `InsightSoftwareConsortium` |
+| `--itk-pythonpackage-tag` | Build scripts version to use | `main` or branch/tag        |
+| `--manylinux-version` | Manylinux standard version | `_2_28`, `_2_34`            |
+| `--cleanup` | Leave temporary build files after completion | (flag)                      |
+| `--build-itk-tarball-cache` | Generate uploadable tarball cache | (flag)                      |
+| `--no-build-itk-tarball-cache` | Skip tarball generation (default) | (flag)                      |
+
+> [!NOTE]
+> For the total list of options, run `pixi run python3 scripts/build_wheels.py --help`
+
+## Advanced Examples
+
+### Build with Dependencies
+
+```bash
+pixi run python3 scripts/build_wheels.py \
+  --platform-env manylinux228-py310 \
+  --module-source-dir ./ITKMyModule \
+  --module-dependencies-root-dir ./dependencies \
+  --itk-module-deps "ITKSplitComponents@v1.2.1:ITKTextureFeatures@v3.0.0" \
+  --itk-package-version v6.0a01 \
+  --no-build-itk-tarball-cache
 ```
 
-##### Windows
+### Custom Build Directory (Linux)
 
-Build wheels for Windows using PowerShell:
-```powershell
-.\scripts\windows-download-cache-and-build-module-wheels.ps1 py310
+```bash
+pixi run python3 scripts/build_wheels.py \
+  --platform-env linux-py311 \
+  --build-dir-root /tmp/itk-build \
+  --itk-git-tag v5.4.0 \
+  --no-build-itk-tarball-cache
 ```
 
+> [!NOTE]
+> Windows builds are also supported using `windows-py3X` platform environments.
 
-#### Build Output
-After successful builds you'll find
+## Output Location
 
-* ITK remote module wheel files in `${MODULE_SRC_DIRECTORY}/dist`
+Built wheels are placed in:
+- **ITK proper**: `<build-dir-root>/dist/`
+- **Remote modules**: `<module-source-dir>/dist/`
 
-### Next Steps
+## Testing Your Wheels
 
-Once you've built the wheels, you can
+Install and test locally:
 
-* Test your wheels locally: `pip install /path/to/your/wheel.whl`
+```bash
+pip install /path/to/your/wheel.whl
 
-* Upload to PyPI or a private index
+# Run a specific module operation
+```
 
 ## Frequently Asked Questions
 
@@ -299,4 +291,3 @@ If you aren't able to find an answer for your specific case, please start a disc
 -   Free software: Apache Software license
 -   Documentation: <http://itkpythonpackage.readthedocs.org>
 -   Source code: <https://github.com/InsightSoftwareConsortium/ITKPythonPackage>
- 
