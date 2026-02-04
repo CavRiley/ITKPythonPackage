@@ -80,7 +80,12 @@ ${unzstd_exe} --version
 
 # -----------------------------------------------------------------------
 # Fetch build archive
-TARBALL_NAME="ITKPythonBuilds-manylinux${MANYLINUX_VERSION}-${TARGET_ARCH}.tar"
+# Include target arch in tarball name for aarch64
+if [ "${TARGET_ARCH}" == "aarch64" ]; then
+    TARBALL_NAME="ITKPythonBuilds-linux-manylinux${MANYLINUX_VERSION}_${TARGET_ARCH}.tar"
+else
+    TARBALL_NAME="ITKPythonBuilds-linux-manylinux${MANYLINUX_VERSION}.tar"
+fi
 
 if [[ ! -f ${TARBALL_NAME}.zst ]]; then
   echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst"
