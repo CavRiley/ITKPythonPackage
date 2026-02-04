@@ -125,6 +125,11 @@ if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
 
   rm -rf ${current_dir}/ITKPythonPackage/scripts/
   cp -r  ${current_dir}/IPP-tmp/scripts ${current_dir}/ITKPythonPackage/scripts
+  cp -r ${current_dir}/IPP-tmp/BuildWheelsSupport ${current_dir}/ITKPythonPackage/BuildWheelsSupport
+  cp -r ${current_dir}/IPP-tmp/SuperbuildSupport ${current_dir}/ITKPythonPackage/SuperbuildSupport
+  rm -rf ${current_dir}/ITKPythonPackage/cmake/
+  cp -r ${current_dir}/IPP-tmp/cmake ${current_dir}/ITKPythonPackage/cmake
+  cp ${current_dir}/IPP-tmp/pixi.toml ${current_dir}/ITKPythonPackage
   rm -rf ${current_dir}/IPP-tmp/
 fi
 
