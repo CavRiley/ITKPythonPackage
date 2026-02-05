@@ -7,12 +7,12 @@ script_dir=$(cd $(dirname $0) || exit 1; pwd)
 
 # Versions can be restricted by passing them in as arguments to the script
 # For example,
-# manylinux-build-wheels.sh cp39
+# manylinux-build-wheels.sh cp310
 if [[ $# -eq 0 ]]; then
   PYBIN=(/opt/python/*/bin)
   PYBINARIES=()
   for version in "${PYBIN[@]}"; do
-    if [[ ${version} == *"cp39"* || ${version} == *"cp310"* || ${version} == *"cp311"* ]]; then
+    if [[ ${version} == *"cp310"* || ${version} == *"cp311"* ]]; then
       PYBINARIES+=(${version})
     fi
   done
