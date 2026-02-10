@@ -71,6 +71,9 @@ auditwheel = "*"
 patchelf = "*"   # Needed for auditwheel
 wheel = "*"
 
+[feature.linux-build.activation.env]
+PYTHONNOUSERSITE = "1"  # Exclude system .local site packages
+
 [feature.manylinux228-build.pypi-dependencies]
 build = "*"
 

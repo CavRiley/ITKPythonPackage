@@ -350,8 +350,11 @@ def build_wheels_main() -> None:
 
     # Platform detection
     binary_ext: str = ".exe" if os_name == "windows" else ""
+    # need to look in the environment bin first
     os.environ["PATH"] = (
-        str(_ipp_dir_path / ".pixi" / "bin") + os.pathsep + os.environ.get("PATH", "")
+            str(_ipp_dir_path / ".pixi" / "envs" / args.platform_env / "bin") + os.pathsep +
+            str(_ipp_dir_path / ".pixi" / "bin") + os.pathsep +
+            os.environ.get("PATH", "")
     )
     pixi_exec_path: Path = _which("pixi" + binary_ext)
     package_env_config: dict[str, str | Path | None] = {}
