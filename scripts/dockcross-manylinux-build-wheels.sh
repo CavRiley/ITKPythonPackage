@@ -5,7 +5,7 @@
 # Versions can be restricted by passing them in as arguments to the script
 # For example,
 #
-#   scripts/dockcross-manylinux-build-wheels.sh cp39
+#   scripts/dockcross-manylinux-build-wheels.sh cp310
 #
 # A specialized manylinux image and tag can be used by exporting to
 # MANYLINUX_VERSION and IMAGE_TAG before running this script.
@@ -15,7 +15,7 @@
 #
 #   export MANYLINUX_VERSION=2014
 #   export IMAGE_TAG=20221205-459c9f0
-#   scripts/dockcross-manylinux-build-module-wheels.sh cp39
+#   scripts/dockcross-manylinux-build-module-wheels.sh cp310
 #
 script_dir=$(cd $(dirname $0) || exit 1; pwd)
 source "${script_dir}/oci_exe.sh"

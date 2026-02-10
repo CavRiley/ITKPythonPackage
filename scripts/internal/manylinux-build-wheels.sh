@@ -5,7 +5,7 @@
 # Versions can be restricted by passing them in as arguments to the script.
 # For example,
 #
-#   /tmp/dockcross-manylinux-x64 manylinux-build-wheels.sh cp39
+#   /tmp/dockcross-manylinux-x64 manylinux-build-wheels.sh cp310
 #
 # Shared library dependencies can be included wheels by mounting them to /usr/lib64 or /usr/local/lib64 
 # before running this script.
@@ -23,7 +23,7 @@
 #   export MANYLINUX_VERSION=2014
 #   docker run --rm dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG} > /tmp/dockcross-manylinux-x64
 #   chmod u+x /tmp/dockcross-manylinux-x64
-#   /tmp/dockcross-manylinux-x64 -e MANYLINUX_VERSION manylinux-build-module-wheels.sh cp39
+#   /tmp/dockcross-manylinux-x64 -e MANYLINUX_VERSION manylinux-build-module-wheels.sh cp310
 #
 
 # -----------------------------------------------------------------------

@@ -5,7 +5,7 @@
 # Versions can be restricted by passing them in as arguments to the script
 # For example,
 #
-#   scripts/macpython-build-wheels.sh 3.9
+#   scripts/macpython-build-wheels.sh 3.10
 #
 # Shared libraries can be included in the wheel by exporting them to DYLD_LIBRARY_PATH before
 # running this script.
@@ -13,7 +13,7 @@
 # For example,
 #
 #   export DYLD_LIBRARY_PATH="/path/to/libs"
-#   scripts/macpython-build-module-wheels.sh 3.9
+#   scripts/macpython-build-module-wheels.sh 3.10
 #
 
 # -----------------------------------------------------------------------

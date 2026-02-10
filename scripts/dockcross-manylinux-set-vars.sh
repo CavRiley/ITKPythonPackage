@@ -10,7 +10,7 @@
 # For example,
 #
 #   export ITK_PACKAGE_VERSION=v5.4.0
-#   scripts/dockcross-manylinux-set-vars.sh cp39
+#   scripts/dockcross-manylinux-set-vars.sh cp310
 #
 ########################################################################
 
