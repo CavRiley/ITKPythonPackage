@@ -270,7 +270,7 @@ class BuildPythonInstanceBase(ABC):
             cmake_superbuild_argumets.update(self.cmake_cmdline_definitions.items())
 
         cmd = [
-            "cmake",
+            self.package_env_config["CMAKE_EXECUTABLE"],
             "-G",
             "Ninja",
         ]
@@ -287,7 +287,7 @@ class BuildPythonInstanceBase(ABC):
         self.echo_check_call(cmd)
         self.echo_check_call(
             [
-                "cmake",
+                self.package_env_config["CMAKE_EXECUTABLE"],
                 "--build",
                 # "--load-average",
                 # str(self.build_node_cpu_count),
