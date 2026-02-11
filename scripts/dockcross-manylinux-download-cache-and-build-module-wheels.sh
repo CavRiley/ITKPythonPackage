@@ -17,6 +17,10 @@
 ########################################################################
 
 download_script_dir=$(cd $(dirname $0) || exit 1; pwd)
+# if not specified, use the current directory for MODULE_SRC_DIRECTORY
+MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY:=${download_script_dir}}
+# if not specified then use the a dummy MODULE_DEPENDENCIES directory in the build dashboard
+MODULE_DEPS_DIR=${MODULE_DEPS_DIR:=${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES}
 # -----------------------------------------------------------------------
 # Script argument parsing
 #
@@ -50,6 +54,14 @@ done
 
 #For backwards compatibility when the ITK_GIT_TAG was required to match the ITK_PACKAGE_VERSION
 ITK_GIT_TAG=${ITK_GIT_TAG:=${ITK_PACKAGE_VERSION}}
+
+# -----------------------------------------------------------------------
+# Set default values
+MANYLINUX_VERSION=${MANYLINUX_VERSION:-_2_28}
+IMAGE_TAG=${IMAGE_TAG:-20250913-6ea98ba}
+TARGET_ARCH=${TARGET_ARCH:-x64}
+ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG:-InsightSoftwareConsortium}
+ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG:-main}
 
 # -----------------------------------------------------------------------
 # Download and extract cache
@@ -88,6 +100,9 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH} \
 IMAGE_TAG=${IMAGE_TAG} \
 ITK_MODULE_PREQ=${ITK_MODULE_PREQ} \
 ITK_MODULE_NO_CLEANUP=${ITK_MODULE_NO_CLEANUP} \
+MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY} \
+MODULE_DEPS_DIR=${MODULE_DEPS_DIR} \
+MANYLINUX_VERSION=${MANYLINUX_VERSION} \
 ${untarred_ipp_dir}/scripts/dockcross-manylinux-build-module-wheels.sh "$@"
 )
 echo "Running: ${_bld_cmd}"
