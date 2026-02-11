@@ -73,6 +73,9 @@ running ITKPythonPackage build scripts for most ITK external modules.
 See [ITKRemoteModuleBuildTestPackageAction](https://github.com/InsightSoftwareConsortium/ITKRemoteModuleBuildTestPackageAction)
 for more information.
 
+> [!NOTE]
+> When using`ITKRemoteModuleBuildTestPackageAction` in your remote module, you can specify the `itk-python-package-org` and `itk-python-package-tag` to build with.
+
 For special cases where ITK reusable workflows are not a good fit,
 ITKPythonPackage scripts can be directly used to build Python wheels
 to target Windows, Linux, and MacOS platforms. See
@@ -128,6 +131,9 @@ Available `--platform-env` options:
 
 Build ITK core library wheels without remote modules:
 
+> [!IMPORTANT]
+> It is recommended to build against ITK version tag `v6.0b01` and up, especially if building with dockcross.
+
 ```bash
 # macOS example
 pixi run python3 scripts/build_wheels.py \
@@ -153,29 +159,27 @@ Build wheels for an ITK remote module:
 pixi run python3 scripts/build_wheels.py \
   --platform-env macosx-py311 \
   --module-source-dir /path/to/ITKRemoteModule \
-  --itk-package-version v6.0a01 \
+  --itk-git-tag v6.0a01 \
   --no-build-itk-tarball-cache
 ```
 
 ### Common Options
 
 
-| Option | Description | Example                     |
-|--------|-------------|-----------------------------|
-| `--platform-env` | Target platform and Python version | `macosx-py310`              |
-| `--module-source-dir` | Path to remote module to build | `/path/to/module`           |
-| `--module-dependencies-root-dir` | Root directory for module dependencies | `./dependencies`            |
-| `--itk-module-deps` | Remote module dependencies | `Mod1@tag:Mod2@tag`         |
-| `--build-dir-root` | Build directory location | `/tmp/itk-build`            |
-| `--itk-source-dir` | Path to ITK source (reuse existing clone) | `/path/to/ITK`              |
-| `--itk-git-tag` | ITK version/branch/commit to use | `v5.4.0`, `main`, `0ffcaed` |
-| `--itk-package-version` | PEP440 version string for wheels | `v6.0b01`                   |
-| `--itk-pythonpackage-org` | GitHub org for build scripts | `InsightSoftwareConsortium` |
-| `--itk-pythonpackage-tag` | Build scripts version to use | `main` or branch/tag        |
-| `--manylinux-version` | Manylinux standard version | `_2_28`, `_2_34`            |
-| `--cleanup` | Leave temporary build files after completion | (flag)                      |
-| `--build-itk-tarball-cache` | Generate uploadable tarball cache | (flag)                      |
-| `--no-build-itk-tarball-cache` | Skip tarball generation (default) | (flag)                      |
+| Option | Description | Example                 |
+|--------|-------------|-------------------------|
+| `--platform-env` | Target platform and Python version | `macosx-py310`          |
+| `--module-source-dir` | Path to remote module to build | `/path/to/module`       |
+| `--module-dependencies-root-dir` | Root directory for module dependencies | `./dependencies`        |
+| `--itk-module-deps` | Remote module dependencies | `Mod1@tag:Mod2@tag`     |
+| `--build-dir-root` | Build directory location | `/tmp/itk-build`        |
+| `--itk-source-dir` | Path to ITK source (reuse existing clone) | `/path/to/ITK`          |
+| `--itk-git-tag` | ITK version/branch/commit to use | `0ffcaed`, `main`, `v6.0b01` |
+| `--itk-package-version` | PEP440 version string for wheels | `v6.0b01`               |
+| `--manylinux-version` | Manylinux standard version | `_2_28`             |
+| `--cleanup` | Leave temporary build files after completion | (flag)                  |
+| `--build-itk-tarball-cache` | Generate uploadable tarball cache | (flag)                  |
+| `--no-build-itk-tarball-cache` | Skip tarball generation (default) | (flag)                  |
 
 > [!NOTE]
 > For the total list of options, run `pixi run python3 scripts/build_wheels.py --help`
