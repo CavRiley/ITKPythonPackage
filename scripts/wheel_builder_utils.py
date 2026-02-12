@@ -569,3 +569,22 @@ def get_default_platform_build(default_python_version: str = "py311") -> str:
         elif sys.platform == "win32":
             return f"windows-{default_python_version}"
     return f"unkown-{default_python_version}"
+
+
+def get_build_name_components_from_platform_env(platform_env: str) -> tuple[str, str]:
+    build_name_components = platform_env.split("-")  # index 0 will be platform arch, index 1 will be python version
+
+    arch_name = None
+    if build_name_components[0] == "manylinux228":
+        arch_name = "manylinux_2_28"  # manylinux
+    else:
+        arch_name = build_name_components[0]  # linux, macos, windows
+    py_version = None
+    if "311" in build_name_components[1]:
+        py_version = "3.11"
+    elif "310" in build_name_components[1]:
+        py_version = "3.10"
+    else:
+        py_version = "3.9"
+
+    return arch_name, py_version

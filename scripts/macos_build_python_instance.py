@@ -49,13 +49,8 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
 
         # check if build was downloaded
         # TODO: the naming convention should be standardized across tarballs
-        # ITK-3.10-macosx_arm64
-
-        build_name_components = self.platform_env.split("-")
-        py_version = None
-        if build_name_components[1] == "py310":
-            py_version = "3.10"
-        binaries_path = Path(self.build_dir_root.parent / "ITKPythonPackage" / f"ITK-{py_version}-{build_name_components[0]}_{target_arch}")
+        # ex: ITK-macosx-py310-macosx-py310_arm64
+        binaries_path = Path(self.build_dir_root / "build" / f"ITK-{self.platform_env}-{self.platform_env}_{target_arch}")
 
         if Path(binaries_path).exists():
             itk_binary_build_name = binaries_path

@@ -840,6 +840,8 @@ class BuildPythonInstanceBase(ABC):
         zst_path: Path = itk_packaging_reference_dir / f"{tar_name}.zst"
 
         itk_resources_build_dir: Path = self.build_dir_root
+        if "ITKPythonPacakge-build" not in itk_resources_build_dir.parts:
+            print(f"Warning: These tarballs will not be compatible with the GitHub Action Runners")
         tarball_include_paths = [
             itk_resources_build_dir.relative_to(itk_packaging_reference_dir),
             self.package_env_config["IPP_SOURCE_DIR"].relative_to(

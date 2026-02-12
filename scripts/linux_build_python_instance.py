@@ -10,7 +10,7 @@ from pathlib import Path
 from build_python_instance_base import BuildPythonInstanceBase
 import shutil
 
-from wheel_builder_utils import _remove_tree
+from wheel_builder_utils import _remove_tree, get_build_name_components_from_platform_env
 
 
 class LinuxBuildPythonInstance(BuildPythonInstanceBase):
@@ -57,16 +57,11 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
 
         # check if build was downloaded
         # TODO: the naming convention should be standardized across tarballs
-        # ITK-cp310-cp310-manylinux_2_28_x64
+        # ex: ITK-cp310-cp310-manylinux_2_28_x64
 
-        # TODO: refactor
-        build_name_components = self.platform_env.split("-")
-        py_version = None
-        if build_name_components[1] == "py310":
-            py_version = "cp310"
-        if build_name_components[0] == "manylinux228":
-            os_name = "manylinux_2_28"
-        binaries_path = Path(self.build_dir_root.parent / "ITKPythonPackage" / f"ITK-{py_version}-{py_version}-{os_name}_{target_arch}")
+        arch_name, py_version = get_build_name_components_from_platform_env(platform_env=self.platform_env)
+        # TODO: ensure the pathing for the pre-compiled binaries are consistent
+        binaries_path = Path(self.build_dir_root.parent / f"ITK-{py_version}-{py_version}-{arch_name}_{target_arch}")
 
         if Path(binaries_path).exists():
             itk_binary_build_name = binaries_path

@@ -240,7 +240,7 @@ def build_wheels_main() -> None:
 
     # set the default build_dir_root to a very short path on windows to avoid path too long errors
     default_itk_source_dir = (
-        ipp_dir.parent / "ITKPythonPackage-build" / "ITK"
+        ipp_dir.parent / "ITKPythonPackage-build" / "ITK-source" / "ITK"
         if os_name != "windows"
         else Path("C:/") / "BDR" / "ITK"
     )
@@ -374,7 +374,7 @@ def build_wheels_main() -> None:
 
     # ITK repo handling
 
-    if not args.itk_source_dir.exists():
+    if not Path(args.itk_source_dir).exists():
         args.itk_source_dir.parent.mkdir(parents=True, exist_ok=True)
         print(f"Cloning ITK into {args.itk_source_dir}...")
         run_result = run_commandLine_subprocess(
