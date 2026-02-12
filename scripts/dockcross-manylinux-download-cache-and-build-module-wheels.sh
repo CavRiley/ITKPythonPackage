@@ -53,6 +53,7 @@ do
 done
 
 #For backwards compatibility when the ITK_GIT_TAG was required to match the ITK_PACKAGE_VERSION
+ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION:="v6.0b01"}
 ITK_GIT_TAG=${ITK_GIT_TAG:=${ITK_PACKAGE_VERSION}}
 
 # -----------------------------------------------------------------------
