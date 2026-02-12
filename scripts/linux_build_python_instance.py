@@ -54,14 +54,31 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             "CMAKE_CXX_COMPILER_TARGET:STRING", target_triple
         )
 
-        itk_binary_build_name: Path = (
-            self.build_dir_root
-            / "build"
-            / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
-        )
+
+        # check if build was downloaded
+        # TODO: the naming convention should be standardized across tarballs
+        # ITK-cp310-cp310-manylinux_2_28_x64
+
+        # TODO: refactor
+        build_name_components = self.platform_env.split("-")
+        py_version = None
+        if build_name_components[1] == "py310":
+            py_version = "cp310"
+        if build_name_components[0] == "manylinux228":
+            os_name = "manylinux_2_28"
+        binaries_path = Path(self.build_dir_root.parent / "ITKPythonPackage" / f"ITK-{py_version}-{py_version}-{os_name}_{target_arch}")
+
+        if Path(binaries_path).exists():
+            itk_binary_build_name = binaries_path
+        else:
+            itk_binary_build_name: Path = (
+                self.build_dir_root
+                / "build"
+                / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
+            )
 
         self.cmake_itk_source_build_configurations.set(
-            "ITK_BINARY_DIR:PATH", itk_binary_build_name
+            "ITK_BINARY_DIR:PATH", itk_binary_build_name.as_posix()
         )
 
         # Keep values consistent with prior quoting behavior
