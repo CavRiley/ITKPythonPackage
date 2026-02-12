@@ -79,12 +79,12 @@ unset _missing_required
 
 # Create dockercross script
 mkdir -p "${_ipp_dir}"/build
-_local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
+_local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-${TARGET_ARCH}_${IMAGE_TAG}.sh
 cd "$(dirname "${_ipp_dir}")"
 
 # Generate dockcross scripts
 $OCI_EXE run \
-             --rm docker.io/dockcross/manylinux"${MANYLINUX_VERSION}"-x64:"${IMAGE_TAG}" > "${_local_dockercross_script}"
+             --rm docker.io/dockcross/manylinux"${MANYLINUX_VERSION}"-"${TARGET_ARCH}":"${IMAGE_TAG}" > "${_local_dockercross_script}"
 chmod u+x ${_local_dockercross_script}
 
 

@@ -104,7 +104,7 @@ ${unzstd_exe} --long=31 ./${TARBALL_NAME}.zst -o ${TARBALL_NAME}
 
 current_dir=$(pwd)
 echo "Extracting all cache files from ${TARBALL_NAME} in ${current_dir}";
-tar xf ${TARBALL_NAME}
+tar xf ${TARBALL_NAME} --warning=no-unknown-keyword
 rm ${TARBALL_NAME}
 
 # -----------------------------------------------------------------------
