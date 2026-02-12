@@ -90,14 +90,14 @@ for PYBIN in "${PYBINARIES[@]}"; do
 
     if $use_skbuild_classic; then
       # So older remote modules with setup.py continue to work
-      ${Python3_EXECUTABLE} -m pip install --upgrade scikit-build
+      sudo ${Python3_EXECUTABLE} -m pip install --upgrade scikit-build
     fi
 
     if [[ -e /work/requirements-dev.txt ]]; then
-      ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
+      sudo ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
     fi
     if [[ -e /ITKPythonPackage/requirements-dev.txt ]]; then
-      ${PYBIN}/pip install --upgrade -r /ITKPythonPackage/requirements-dev.txt
+      sudo ${PYBIN}/pip install --upgrade -r /ITKPythonPackage/requirements-dev.txt
     fi
     version=$(basename $(dirname ${PYBIN}))
     # Remove "m" -- not present in Python 3.8 and later
