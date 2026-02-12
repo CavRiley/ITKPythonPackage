@@ -8,7 +8,7 @@ from pathlib import Path
 
 from build_python_instance_base import BuildPythonInstanceBase
 
-from wheel_builder_utils import _remove_tree
+from wheel_builder_utils import _remove_tree, get_build_name_components_from_platform_env
 
 
 class MacOSBuildPythonInstance(BuildPythonInstanceBase):
