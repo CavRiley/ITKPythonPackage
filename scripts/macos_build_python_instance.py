@@ -47,14 +47,27 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
             "CMAKE_OSX_ARCHITECTURES:STRING", target_arch
         )
 
-        itk_binary_build_name: Path = (
-            self.build_dir_root
-            / "build"
-            / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
-        )
+        # check if build was downloaded
+        # TODO: the naming convention should be standardized across tarballs
+        # ITK-3.10-macosx_arm64
+
+        build_name_components = self.platform_env.split("-")
+        py_version = None
+        if build_name_components[1] == "py310":
+            py_version = "3.10"
+        binaries_path = Path(self.build_dir_root.parent / "ITKPythonPackage" / f"ITK-{py_version}-{build_name_components[0]}_{target_arch}")
+
+        if Path(binaries_path).exists():
+            itk_binary_build_name = binaries_path
+        else:
+            itk_binary_build_name: Path = (
+                self.build_dir_root
+                / "build"
+                / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
+            )
 
         self.cmake_itk_source_build_configurations.set(
-            "ITK_BINARY_DIR:PATH", itk_binary_build_name
+            "ITK_BINARY_DIR:PATH", itk_binary_build_name.as_posix()
         )
 
         # Keep values consistent with prior quoting behavior
