@@ -198,6 +198,15 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             print(f'RUNNING WITH PATH {os.environ["PATH"]}')
             env["PATH"] = os.environ["PATH"]
             self.echo_check_call(cmd, env=env)
+
+            # Remove the original linux_*.whl after successful repair
+            filepath_obj = Path(filepath)
+            if filepath_obj.exists() and "linux_x86_64.whl" in filepath_obj.name:
+                print(f"Removing original linux wheel after repair: {filepath_obj.name}")
+                try:
+                    _remove_tree(filepath_obj)
+                except OSError as e:
+                    print(f"Warning: Could not remove {filepath_obj.name}: {e}")
         print(
             "Building outside of manylinux environment does not require wheel fixups."
         )
