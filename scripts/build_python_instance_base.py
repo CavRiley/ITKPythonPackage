@@ -864,22 +864,17 @@ class BuildPythonInstanceBase(ABC):
                 itk_packaging_reference_dir,
                 "-cf",
                 str(tar_path),
-                "--exclude=*.o",  # Do not include object files
-                # We need the .whl files in the cache for testing"--exclude=*.whl",  # Do not include built wheels
-                # We need the .whl files in the cache for testing"--exclude=*/dist/*",  # Do not include the dist whl output directory
+                "--exclude=*.whl",  # Do not include built wheels
+                "--exclude=*/dist/*",  # Do not include the dist whl output directory
                 "--exclude=*/wheelbuilds/*",  # Do not include the wheelbuild support directory
                 "--exclude=*/__pycache__/*",  # Do not include __pycache__
                 "--exclude=install_manifest_*.txt",  # Do not include install manifest files
-                "--exclude=build.ninja",
-                "--exclude=.ninja_deps",
-                "--exclude=.ninja_long",
                 "--exclude=._*",  # Exclude mac dot files
                 "--exclude=*/.git/*",
                 "--exclude=*/.idea/*",
                 "--exclude=*/.pixi/*",
-                "--exclude=*/CastXML/*",
-                "--exclude=*/castxml_inputs/*",
-                "--exclude=*/Wrapping/Modules/*",
+                "--exclude=*/Wrapping/**/*.pyc",  # Python bytecode
+                "--exclude=*/Wrapping/**/__pycache__/*",  # Python cache
                 *tarball_include_paths,
             ]
         )
