@@ -62,7 +62,7 @@ for PYBIN in "${PYBINARIES[@]}"; do
     echo "Python3_INCLUDE_DIR:${Python3_INCLUDE_DIR}"
 
     # Install dependencies
-    ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
+    sudo ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
 
     build_type="Release"
     compile_flags="-O3 -DNDEBUG"
@@ -204,7 +204,7 @@ rm dist/itk_*-linux_*.whl
 # Install packages and test
 for PYBIN in "${PYBINARIES[@]}"; do
     ${PYBIN}/pip install --user numpy
-    ${PYBIN}/pip install --upgrade pip
+    sudo ${PYBIN}/pip install --upgrade pip
     ${PYBIN}/pip install itk --user --no-cache-dir --no-index -f /work/dist
     (cd $HOME && ${PYBIN}/python -c 'from itk import ITKCommon;')
     (cd $HOME && ${PYBIN}/python -c 'import itk; image = itk.Image[itk.UC, 2].New()')
