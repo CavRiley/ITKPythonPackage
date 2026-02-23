@@ -361,7 +361,7 @@ def build_wheels_main() -> None:
 
     args.build_dir_root = Path(args.build_dir_root)
     if args.itk_source_dir is None:
-        args.itk_source_dir = args.build_dir_root / "ITK-source" / "ITK"
+        args.itk_source_dir = args.build_dir_root / "ITK"
 
     args.itk_source_dir = Path(args.itk_source_dir)
     package_env_config["ITK_SOURCE_DIR"] = Path(args.itk_source_dir)

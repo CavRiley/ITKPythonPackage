@@ -59,18 +59,11 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
         # TODO: the naming convention should be standardized across tarballs
         # ex: ITK-cp310-cp310-manylinux_2_28_x64
 
-        arch_name, py_version = get_build_name_components_from_platform_env(platform_env=self.platform_env)
-        # TODO: ensure the pathing for the pre-compiled binaries are consistent
-        binaries_path = Path(self.build_dir_root.parent / f"ITK-{py_version}-{py_version}-{arch_name}_{target_arch}")
-
-        if Path(binaries_path).exists():
-            itk_binary_build_name = binaries_path
-        else:
-            itk_binary_build_name: Path = (
-                self.build_dir_root
-                / "build"
-                / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
-            )
+        itk_binary_build_name: Path = (
+            self.build_dir_root
+            / "build"
+            / f"ITK-{self.platform_env}-{self.get_pixi_environment_name()}_{target_arch}"
+        )
 
         self.cmake_itk_source_build_configurations.set(
             "ITK_BINARY_DIR:PATH", itk_binary_build_name.as_posix()

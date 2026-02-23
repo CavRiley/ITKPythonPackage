@@ -33,8 +33,7 @@ CONTAINER_PACKAGE_BUILD_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage-build
 CONTAINER_PACKAGE_SCRIPTS_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage
 CONTAINER_MODULE_SRC_DIRECTORY=${CONTAINER_WORK_DIR}/$(basename "${MODULE_SRC_DIRECTORY}")
 CONTAINER_PACKAGE_DIST=${CONTAINER_PACKAGE_BUILD_DIR}/dist
-ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK-source/ITK
-
+CONTAINER_ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""}
 
 echo "BUILD FOR ${PY_ENVS}"
@@ -51,23 +50,38 @@ for py_indicator in ${PY_ENVS}; do
   python3.12 ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/install_pixi.py --platform-env ${PIXI_ENV}
 
   cd ${CONTAINER_PACKAGE_SCRIPTS_DIR}
-  pixi run -e ${PIXI_ENV} python3 \
-    ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \
-    --platform-env ${PIXI_ENV} \
-    ${BUILD_WHEELS_EXTRA_FLAGS} \
-    --module-source-dir "${CONTAINER_MODULE_SRC_DIRECTORY}" \
-    --module-dependencies-root-dir "${CONTAINER_MODULES_ROOT_DIRECTORY}" \
-    --itk-module-deps "${ITK_MODULE_PREQ}" \
-    --no-build-itk-tarball-cache \
-    --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
-    --itk-source-dir ${ITK_SOURCE_DIR} \
-    --itk-git-tag "${ITK_GIT_TAG}" \
-    --manylinux-version "${MANYLINUX_VERSION}" \
-    --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
-    --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
-    --no-use-sudo \
-    --no-use-ccache
-
+  if [ -n "${MODULE_SRC_DIRECTORY}" ]; then
+    pixi run -e ${PIXI_ENV} python3 \
+      ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \
+      --platform-env ${PIXI_ENV} \
+      ${BUILD_WHEELS_EXTRA_FLAGS} \
+      --module-source-dir "${CONTAINER_MODULE_SRC_DIRECTORY}" \
+      --module-dependencies-root-dir "${CONTAINER_MODULES_ROOT_DIRECTORY}" \
+      --itk-module-deps "${ITK_MODULE_PREQ}" \
+      --no-build-itk-tarball-cache \
+      --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
+      --itk-source-dir ${CONTAINER_ITK_SOURCE_DIR} \
+      --itk-git-tag "${ITK_GIT_TAG}" \
+      --manylinux-version "${MANYLINUX_VERSION}" \
+      --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
+      --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
+      --no-use-sudo \
+      --no-use-ccache
+  else
+    pixi run -e ${PIXI_ENV} python3 \
+      ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \
+      --platform-env ${PIXI_ENV} \
+      ${BUILD_WHEELS_EXTRA_FLAGS} \
+      --build-itk-tarball-cache \
+      --build-dir-root ${CONTAINER_PACKAGE_BUILD_DIR} \
+      --itk-source-dir ${CONTAINER_ITK_SOURCE_DIR} \
+      --itk-git-tag "${ITK_GIT_TAG}" \
+      --manylinux-version "${MANYLINUX_VERSION}" \
+      --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
+      --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
+      --no-use-sudo \
+      --no-use-ccache
+  fi
   build_status=$?
   if [ $build_status -ne 0 ]; then
     echo "ERROR: Build failed for ${py_indicator} with exit code ${build_status}"
