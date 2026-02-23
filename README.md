@@ -172,14 +172,14 @@ ITK build caches allow you to reuse pre-built ITK binaries across builds, signif
 To build ITK once and create a reusable tarball cache:
 
 ```bash
-pixi run python3 scripts/build_wheels.py \
-  --platform-env macosx-py310 \
-  --build-itk-tarball-cache \
-  --itk-git-tag v6.0b01
+bash scripts/make_tarballs.sh
 ```
 
+> [!NOTE]
+> This script warns you when you are building against the conventions used for GitHub Actions
+
 **What this does:**
-- Builds ITK from source
+- Builds tarballs for python 3.9, 3.10, and 3.11 unless otherwise specified
 - Creates a compressed tarball containing:
   - Pre-compiled ITK binaries (`.o`, `.a`, `.so` files)
   - ITK source code
@@ -192,16 +192,16 @@ Example: `ITKPythonBuilds-macosx-arm64.tar.zst`
 
 #### Understanding Build Cache Paths
 
-> [!CRITICAL]
+> [!IMPORTANT]
 > Build caches contain **absolute paths** within the CMake cache files. When reusing caches, paths must match exactly or the cache must be regenerated.
 
-**Standard paths that should be used in GitHub Action build caches:**
+**Standard build root paths that should be used in GitHub Action build caches:**
 
-| Platform | ITK Source Path                                                  | ITK Binary Path                                                                                  |
-|----------|------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| **manylinux** (docker) | `/work/ITKPythonPackage-build/ITK-source/ITK`                    | `/work/ITKPythonPackage-build/build/ITK-<platform_env>-<platform_env>_<arch>`                    |
-| **macOS** | `/Users/svc-dashboard/D/P/ITKPythonPackage-build/ITK-source/ITK` | `/Users/svc-dashboard/D/P/ITKPythonPackage-build/build/ITK-<platform_env>-<platform_env>_<arch>` |
-| **Windows** | `TBD`                                                            | `TBD`                                                                                            |
+| Platform | Root Build Path                                   |
+|----------|---------------------------------------------------|
+| **manylinux** (docker) | `/work/ITKPythonPackage-build`                    |
+| **macOS** | `/Users/svc-dashboard/D/P/ITKPythonPackage-build` |
+| **Windows** | `TBD`                                             |
 
 > [!WARNING]
 > If you extract a build cache to different paths than it was built with, CMake will fail with path mismatch errors.
