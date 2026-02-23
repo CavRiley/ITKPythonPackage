@@ -240,7 +240,7 @@ def build_wheels_main() -> None:
 
     # set the default build_dir_root to a very short path on windows to avoid path too long errors
     default_itk_source_dir = (
-        ipp_dir.parent / "ITKPythonPackage-build" / "ITK-source" / "ITK"
+        ipp_dir.parent / "ITKPythonPackage-build" / "ITK"
         if os_name != "windows"
         else Path("C:/") / "BDR" / "ITK"
     )
