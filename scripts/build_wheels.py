@@ -342,6 +342,25 @@ def build_wheels_main() -> None:
          """,
     )
 
+    parser.add_argument(
+        "--use-prebuilt-itk",
+        action="store_true",
+        dest="use_prebuilt_itk",
+        default=False,
+        help="""
+         -  Option to indicate that ITK has already been built and should be used for creating the wheels
+         """,
+    )
+
+    parser.add_argument(
+        "--no-use-prebuilt-itk",
+        action="store_false",
+        dest="use_prebuilt_itk",
+        help="""
+             -  Option to indicate that ITK has not already been built and should be used for creating the wheels
+             """,
+    )
+
     args = parser.parse_args()
 
     # Historical dist_dir name for compatibility with ITKRemoteModuleBuildTestPackageAction
@@ -390,25 +409,27 @@ def build_wheels_main() -> None:
         if run_result.returncode != 0:
             raise RuntimeError(f"Failed to clone ITK: {run_result.stderr}")
 
-    run_commandLine_subprocess(
-        ["git", "fetch", "--tags", "origin"],
-        cwd=args.itk_source_dir,
-        env=os.environ.copy(),
-    )
-    try:
+    # Dont touch ITK source if we are using prebuilt ITK
+    if not args.use_prebuilt_itk:
         run_commandLine_subprocess(
-            ["git", "checkout", args.itk_git_tag],
+            ["git", "fetch", "--tags", "origin"],
             cwd=args.itk_source_dir,
             env=os.environ.copy(),
         )
-    except subprocess.CalledProcessError:
-        # try fetch then checkout
-        print(f"WARNING: Failed to checkout {args.itk_git_tag}, reverting to 'main':")
-        run_commandLine_subprocess(
-            ["git", "checkout", args.itk_git_tag],
-            cwd=args.itk_source_dir,
-            env=os.environ.copy(),
-        )
+        try:
+            run_commandLine_subprocess(
+                ["git", "checkout", args.itk_git_tag],
+                cwd=args.itk_source_dir,
+                env=os.environ.copy(),
+            )
+        except subprocess.CalledProcessError:
+            # try fetch then checkout
+            print(f"WARNING: Failed to checkout {args.itk_git_tag}, reverting to 'main':")
+            run_commandLine_subprocess(
+                ["git", "checkout", args.itk_git_tag],
+                cwd=args.itk_source_dir,
+                env=os.environ.copy(),
+            )
 
     if (
         args.itk_package_version == "auto"
