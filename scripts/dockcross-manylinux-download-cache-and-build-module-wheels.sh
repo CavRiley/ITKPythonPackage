@@ -87,7 +87,7 @@ eval ${_download_cmd}
 #      during ${download_script_dir}/dockcross-manylinux-download-cache.sh
 untarred_ipp_dir=${download_script_dir}/ITKPythonPackage
 
-
+ITK_SOURCE_DIR=${download_script_dir}/ITKPythonPackage-build/ITK
 
 # -----------------------------------------------------------------------
 # Build module wheels
@@ -99,6 +99,7 @@ _bld_cmd=$(echo \
 NO_SUDO=${NO_SUDO} \
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH} \
 IMAGE_TAG=${IMAGE_TAG} \
+ITK_SOURCE_DIR=${ITK_SOURCE_DIR} \
 ITK_MODULE_PREQ=${ITK_MODULE_PREQ} \
 ITK_MODULE_NO_CLEANUP=${ITK_MODULE_NO_CLEANUP} \
 MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY} \
