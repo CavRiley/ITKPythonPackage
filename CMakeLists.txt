@@ -92,7 +92,7 @@ if(ITKPythonPackage_SUPERBUILD)
   #-----------------------------------------------------------------------------
   include(ExternalProject)
 
-  set(ITK_REPOSITORY "https://github.com/blowekamp/ITK.git")
+  set(ITK_REPOSITORY "https://github.com/InsightSoftwareConsortium/ITK.git")
 
   # release branch, 2026-02-25
   set(ITK_GIT_TAG "v6.0b02")
