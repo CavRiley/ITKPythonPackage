@@ -167,7 +167,7 @@ pixi run python3 scripts/build_wheels.py \
 
 ITK build caches allow you to reuse pre-built ITK binaries across builds, significantly speeding up remote module development. This section covers creating caches locally and using them correctly.
 
-#### Creating Local Build Caches
+#### Creating Local Build Caches for GitHub Actions
 
 To build ITK once and create a reusable tarball cache:
 
@@ -181,7 +181,7 @@ bash scripts/make_tarballs.sh
 **What this does:**
 - Builds tarballs for python 3.9, 3.10, and 3.11 unless otherwise specified
 - Creates a compressed tarball containing:
-  - Pre-compiled ITK binaries (`.o`, `.a`, `.so` files)
+  - Pre-compiled ITK binaries (`.a`, `.so` files)
   - ITK source code
   - CMake configuration files
 - Places the tarball in parent of the `<build-dir-root>` specified by the `--build-dir-root` option
@@ -205,6 +205,27 @@ Example: `ITKPythonBuilds-macosx-arm64.tar.zst`
 
 > [!WARNING]
 > If you extract a build cache to different paths than it was built with, CMake will fail with path mismatch errors.
+
+#### Creating Local Build Caches for Local Use
+
+To build ITK locally and create a reusable tarball cache:
+
+```bash
+  pixi run python3 scripts/build_wheels.py \
+          --platform-env <platform-env> \
+          --build-itk-tarball-cache \
+          --build-dir-root <build-dir-root> \
+          --itk-source-dir <path-to-local-itk> \
+          --itk-git-tag ${ITK_GIT_TAG}
+```
+
+**What this does:**
+- Builds tarballs for python 3.9, 3.10, and 3.11 unless otherwise specified
+- Creates a compressed tarball containing:
+  - Pre-compiled ITK binaries (`.a`, `.so` files)
+  - ITK source code
+  - CMake configuration files
+- Places the tarball in parent of the `<build-dir-root>` specified by the `--build-dir-root` option
 
 
 ### Common Options
