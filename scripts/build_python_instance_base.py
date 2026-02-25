@@ -840,7 +840,7 @@ class BuildPythonInstanceBase(ABC):
         zst_path: Path = itk_packaging_reference_dir / f"{tar_name}.zst"
 
         itk_resources_build_dir: Path = self.build_dir_root
-        if "ITKPythonPacakge-build" not in itk_resources_build_dir.parts:
+        if "ITKPythonPackage-build" not in itk_resources_build_dir.parts:
             print(f"Warning: These tarballs will not be compatible with the GitHub Action Runners")
         tarball_include_paths = [
             itk_resources_build_dir.relative_to(itk_packaging_reference_dir),
@@ -864,6 +864,7 @@ class BuildPythonInstanceBase(ABC):
                 itk_packaging_reference_dir,
                 "-cf",
                 str(tar_path),
+                "--exclude=*.o",
                 "--exclude=*.whl",  # Do not include built wheels
                 "--exclude=*/dist/*",  # Do not include the dist whl output directory
                 "--exclude=*/wheelbuilds/*",  # Do not include the wheelbuild support directory
