@@ -874,8 +874,8 @@ class BuildPythonInstanceBase(ABC):
                 "--exclude=*/.git/*",
                 "--exclude=*/.idea/*",
                 "--exclude=*/.pixi/*",
-                "--exclude=*/Wrapping/**/*.pyc",  # Python bytecode
-                "--exclude=*/Wrapping/**/__pycache__/*",  # Python cache
+                "--exclude=*/castxml_inputs/*",
+                "--exclude=*/Wrapping/Modules/*",
                 *tarball_include_paths,
             ]
         )
