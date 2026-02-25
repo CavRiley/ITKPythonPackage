@@ -343,21 +343,23 @@ def build_wheels_main() -> None:
     )
 
     parser.add_argument(
-        "--use-prebuilt-itk",
+        "--use-ci-environment",
         action="store_true",
-        dest="use_prebuilt_itk",
+        dest="use_ci_environment",
         default=False,
         help="""
-         -  Option to indicate that ITK has already been built and should be used for creating the wheels
+         -  Option to indicate we are building wheels in the CI environment
+            * Skips ITK building and building built-in ITK modules (only performs remote module build)
          """,
     )
 
     parser.add_argument(
-        "--no-use-prebuilt-itk",
+        "--no-use-ci-environment",
         action="store_false",
-        dest="use_prebuilt_itk",
+        dest="use_ci_environment",
         help="""
-             -  Option to indicate that ITK has not already been built and should be used for creating the wheels
+         -  Option to indicate we are building wheels in the CI environment
+            * Skips ITK building and building built-in ITK modules (only performs remote module build)
              """,
     )
 
@@ -409,8 +411,8 @@ def build_wheels_main() -> None:
         if run_result.returncode != 0:
             raise RuntimeError(f"Failed to clone ITK: {run_result.stderr}")
 
-    # Dont touch ITK source if we are using prebuilt ITK
-    if not args.use_prebuilt_itk:
+    # Dont touch ITK source if we are in ci environment
+    if not args.use_ci_environment:
         run_commandLine_subprocess(
             ["git", "fetch", "--tags", "origin"],
             cwd=args.itk_source_dir,
@@ -566,6 +568,7 @@ def build_wheels_main() -> None:
         module_source_dir=args.module_source_dir,
         module_dependencies_root_dir=args.module_dependencies_root_dir,
         itk_module_deps=args.itk_module_deps,
+        use_ci_environment=args.use_ci_environment,
     )
     builder.run()
 

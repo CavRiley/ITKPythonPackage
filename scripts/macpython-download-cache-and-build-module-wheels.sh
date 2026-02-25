@@ -120,7 +120,7 @@ for py_indicator in ${args[@]}; do
            --itk-pythonpackage-org ${ITKPYTHONPACKAGE_ORG} \
            --itk-pythonpackage-tag ${ITKPYTHONPACKAGE_TAG} \
            --no-use-sudo \
-           --no-use-ccache
-
+           --no-use-ccache \
+           --use-ci-environment
            #Let this be automatically selected --macosx-deployment-target 10.7 \
 done

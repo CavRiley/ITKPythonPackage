@@ -67,7 +67,7 @@ for py_indicator in ${PY_ENVS}; do
       --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
       --no-use-sudo \
       --no-use-ccache \
-      --use-prebuilt-itk
+      --use-ci-environment
   else
     pixi run -e ${PIXI_ENV} python3 \
       ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/build_wheels.py \

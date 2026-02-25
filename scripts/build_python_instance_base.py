@@ -9,7 +9,8 @@ from abc import ABC, abstractmethod
 import shutil
 import subprocess
 from pathlib import Path
-from typing import OrderedDict
+from collections import OrderedDict
+from typing import Callable
 
 from cmake_argument_builder import CMakeArgumentBuilder
 
@@ -46,6 +47,7 @@ class BuildPythonInstanceBase(ABC):
         module_source_dir: Path | None = None,
         module_dependencies_root_dir: Path | None = None,
         itk_module_deps: str | None = None,
+        use_ci_environment: bool | None = None,
     ) -> None:
         self.build_node_cpu_count: int = os.cpu_count() or 1
         self.platform_env = platform_env
@@ -98,6 +100,7 @@ class BuildPythonInstanceBase(ABC):
             Path(module_dependencies_root_dir) if module_dependencies_root_dir else None
         )
         self.itk_module_deps = itk_module_deps
+        self.use_ci_environment = use_ci_environment
         self.prepare_build_env()
 
         self.package_env_config["BUILD_TYPE"] = "Release"
@@ -203,7 +206,7 @@ class BuildPythonInstanceBase(ABC):
         if self.itk_module_deps:
             self._build_module_dependencies()
 
-        python_package_build_steps: OrderedDict = OrderedDict(
+        python_package_build_steps: OrderedDict[str, Callable] = OrderedDict(
             {
                 "01_superbuild_support_components": self.build_superbuild_support_components,
                 "02_build_wrapped_itk_cplusplus": self.build_wrapped_itk_cplusplus,
@@ -212,6 +215,19 @@ class BuildPythonInstanceBase(ABC):
                 "05_final_import_test": self.final_import_test,
             }
         )
+
+        if self.use_ci_environment:
+            # Skip these steps if we are in the CI environment
+            python_package_build_steps = OrderedDict(
+                ("02_build_wrapped_itk_cplusplus_skipped", (lambda: None)) if k == "02_build_wrapped_itk_cplusplus" else (k, v)
+                for k, v in python_package_build_steps.items()
+            )
+            # TODO: check this because we may not want to do this everytime
+            python_package_build_steps = OrderedDict(
+                ("03_build_wheels_skipped", (lambda: None)) if k == "03_build_wheels" else (k, v)
+                for k, v in python_package_build_steps.items()
+            )
+
         if self.module_source_dir is not None:
             python_package_build_steps[
                 f"06_build_external_module_wheel_{self.module_source_dir.name}"
