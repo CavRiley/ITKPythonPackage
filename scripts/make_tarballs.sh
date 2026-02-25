@@ -88,8 +88,9 @@ if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
   mkdir -p ${DASHBOARD_BUILD_DIRECTORY}
 fi
 if [ "${script_dir}" !=  "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts" ]; then
-   echo "ERROR: Github CI requires rigid directory structure"
-   echo "  RUN: git checkout git@github.com:InsightSoftwareConsortium/ITKPythonPackage.git ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage"
+   echo "ERROR: Github CI requires rigid directory structure, you may substitute the ITKPythonPackage organization if testing"
+   echo "  RUN: cd ${DASHBOARD_BUILD_DIRECTORY}"
+   echo "  RUN: git clone git@github.com:${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage"
    echo "  RUN: ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/make_tarballs.sh"
    exit 1
 fi
