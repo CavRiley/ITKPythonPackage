@@ -80,14 +80,10 @@ ${unzstd_exe} --version
 
 # -----------------------------------------------------------------------
 # Fetch build archive
-# Include target arch in tarball name for aarch64
-if [ "${TARGET_ARCH}" == "aarch64" ]; then
-    TARBALL_NAME="ITKPythonBuilds-linux-manylinux${MANYLINUX_VERSION}_${TARGET_ARCH}.tar"
-else
-    TARBALL_NAME="ITKPythonBuilds-linux-manylinux${MANYLINUX_VERSION}.tar"
-fi
+TARBALL_NAME="ITKPythonBuilds-manylinux${MANYLINUX_VERSION}-${TARGET_ARCH}.tar"
 
 if [[ ! -f ${TARBALL_NAME}.zst ]]; then
+  echo "Local ITK cache tarball file not found..."
   echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst"
   curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O
   if [ $? -ne 0 ]; then

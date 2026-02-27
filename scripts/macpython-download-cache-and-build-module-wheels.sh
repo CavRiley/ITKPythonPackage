@@ -58,13 +58,27 @@ if [ ! -f  ${PIXI_HOME}/.pixi/bin/pixi ]; then
 fi
 export PATH="${PIXI_HOME}/bin:$PATH"
 
-if [[ $(arch) == "arm64" ]]; then
-  tarball_arch="-arm64"
-else
-  tarball_arch=""
+tarball_arch="-$(arch)"
+TARBALL_NAME="ITKPythonBuilds-macosx${tarball_arch}.tar"
+
+if [[ ! -f ${TARBALL_NAME}.zst ]]; then
+    echo "Local ITK cache tarball file not found..."
+    # Fetch ITKPythonBuilds archive containing ITK build artifacts
+    echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
+    curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst -O
+    if [ $? -ne 0 ]; then
+      echo "FAILED Download:"
+      echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
+      exit 1
+    fi
 fi
-# Fetch ITKPythonBuilds archive containing ITK build artifacts
-echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
+
+if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
+  echo "ERROR: can not find required binary './${TARBALL_NAME}.zst'"
+  exit 255
+fi
+
+
 local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
 if [[ ! -f ${local_compress_tarball_name} ]]; then
   aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
