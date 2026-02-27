@@ -47,7 +47,8 @@ class BuildPythonInstanceBase(ABC):
         module_source_dir: Path | None = None,
         module_dependencies_root_dir: Path | None = None,
         itk_module_deps: str | None = None,
-        use_ci_environment: bool | None = None,
+        skip_itk_build: bool | None = None,
+        skip_itk_wheel_build: bool | None = None,
     ) -> None:
         self.build_node_cpu_count: int = os.cpu_count() or 1
         self.platform_env = platform_env
@@ -100,7 +101,8 @@ class BuildPythonInstanceBase(ABC):
             Path(module_dependencies_root_dir) if module_dependencies_root_dir else None
         )
         self.itk_module_deps = itk_module_deps
-        self.use_ci_environment = use_ci_environment
+        self.skip_itk_build = skip_itk_build
+        self.skip_itk_wheel_build = skip_itk_wheel_build
         self.prepare_build_env()
 
         self.package_env_config["BUILD_TYPE"] = "Release"
@@ -216,13 +218,13 @@ class BuildPythonInstanceBase(ABC):
             }
         )
 
-        if self.use_ci_environment:
+        if self.skip_itk_build:
             # Skip these steps if we are in the CI environment
             python_package_build_steps = OrderedDict(
                 ("02_build_wrapped_itk_cplusplus_skipped", (lambda: None)) if k == "02_build_wrapped_itk_cplusplus" else (k, v)
                 for k, v in python_package_build_steps.items()
             )
-            # TODO: check this because we may not want to do this everytime
+        if self.skip_itk_wheel_build:
             python_package_build_steps = OrderedDict(
                 ("03_build_wheels_skipped", (lambda: None)) if k == "03_build_wheels" else (k, v)
                 for k, v in python_package_build_steps.items()

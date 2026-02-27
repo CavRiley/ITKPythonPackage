@@ -343,24 +343,41 @@ def build_wheels_main() -> None:
     )
 
     parser.add_argument(
-        "--use-ci-environment",
+        "--skip-itk-build",
         action="store_true",
-        dest="use_ci_environment",
+        dest="skip_itk_build",
         default=False,
         help="""
-         -  Option to indicate we are building wheels in the CI environment
-            * Skips ITK building and building built-in ITK modules (only performs remote module build)
+         -  Option to skip the ITK C++ build step (Step 2)
          """,
     )
 
     parser.add_argument(
-        "--no-use-ci-environment",
+        "--no-skip-itk-build",
         action="store_false",
-        dest="use_ci_environment",
+        dest="skip_itk_build",
         help="""
-         -  Option to indicate we are building wheels in the CI environment
-            * Skips ITK building and building built-in ITK modules (only performs remote module build)
-             """,
+         -  Option to not skip the ITK C++ build step (Step 2)
+         """,
+    )
+
+    parser.add_argument(
+        "--skip-itk-wheel-build",
+        action="store_true",
+        dest="skip_itk_wheel_build",
+        default=False,
+        help="""
+         -  Option to skip the ITK wheel build step (Step 3)
+         """,
+    )
+
+    parser.add_argument(
+        "--no-skip-itk-wheel-build",
+        action="store_false",
+        dest="skip_itk_wheel_build",
+        help="""
+         -  Option to not skip the ITK wheel build step (Step 3)
+         """,
     )
 
     args = parser.parse_args()
@@ -411,27 +428,25 @@ def build_wheels_main() -> None:
         if run_result.returncode != 0:
             raise RuntimeError(f"Failed to clone ITK: {run_result.stderr}")
 
-    # Dont touch ITK source if we are in ci environment
-    if not args.use_ci_environment:
+    run_commandLine_subprocess(
+        ["git", "fetch", "--tags", "origin"],
+        cwd=args.itk_source_dir,
+        env=os.environ.copy(),
+    )
+    try:
         run_commandLine_subprocess(
-            ["git", "fetch", "--tags", "origin"],
+            ["git", "checkout", args.itk_git_tag],
             cwd=args.itk_source_dir,
             env=os.environ.copy(),
         )
-        try:
-            run_commandLine_subprocess(
-                ["git", "checkout", args.itk_git_tag],
-                cwd=args.itk_source_dir,
-                env=os.environ.copy(),
-            )
-        except subprocess.CalledProcessError:
-            # try fetch then checkout
-            print(f"WARNING: Failed to checkout {args.itk_git_tag}, reverting to 'main':")
-            run_commandLine_subprocess(
-                ["git", "checkout", args.itk_git_tag],
-                cwd=args.itk_source_dir,
-                env=os.environ.copy(),
-            )
+    except subprocess.CalledProcessError:
+        # try fetch then checkout
+        print(f"WARNING: Failed to checkout {args.itk_git_tag}, reverting to 'main':")
+        run_commandLine_subprocess(
+            ["git", "checkout", args.itk_git_tag],
+            cwd=args.itk_source_dir,
+            env=os.environ.copy(),
+        )
 
     if (
         args.itk_package_version == "auto"
@@ -568,7 +583,8 @@ def build_wheels_main() -> None:
         module_source_dir=args.module_source_dir,
         module_dependencies_root_dir=args.module_dependencies_root_dir,
         itk_module_deps=args.itk_module_deps,
-        use_ci_environment=args.use_ci_environment,
+        skip_itk_build=args.skip_itk_build,
+        skip_itk_wheel_build=args.skip_itk_wheel_build,
     )
     builder.run()
 
