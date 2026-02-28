@@ -88,10 +88,10 @@ if ($env:ITKPYTHONPACKAGE_TAG) {
 }
 
 # Get other build dependencies
-if (-not (Test-Path doxygen-1.8.11.windows.bin.zip)) {
-  Invoke-WebRequest -Uri "https://data.kitware.com/api/v1/file/5c0ad59d8d777f2179dd3e9c/download" -OutFile "doxygen-1.8.11.windows.bin.zip"
+if (-not (Test-Path doxygen-1.16.1.windows.bin.zip)) {
+  Invoke-WebRequest -Uri "https://github.com/doxygen/doxygen/releases/download/Release_1_16_1/doxygen-1.16.1.windows.x64.bin.zip" -OutFile "doxygen-1.16.1.windows.bin.zip"
 }
-7z x doxygen-1.8.11.windows.bin.zip -oC:\P\doxygen -aoa -r
+7z x doxygen-1.16.1.windows.bin.zip -oC:\P\doxygen -aoa -r
 if (-not (Test-Path grep-win.zip)) {
   Invoke-WebRequest -Uri "https://data.kitware.com/api/v1/file/5bbf87ba8d777f06b91f27d6/download/grep-win.zip" -OutFile "grep-win.zip"
 }
