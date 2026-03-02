@@ -60,6 +60,7 @@ def build_wrapped_itk(
     python_executable,
     python_include_dir,
     python_library,
+    python_sabi_library,
 ):
     tbb_dir = os.path.join(ROOT_DIR, "oneTBB-prefix", "lib", "cmake", "TBB")
 
@@ -82,7 +83,7 @@ def build_wrapped_itk(
                 "-DPython3_INCLUDE_DIR:PATH=%s" % python_include_dir,
                 "-DPython3_INCLUDE_DIRS:PATH=%s" % python_include_dir,
                 "-DPython3_LIBRARY:FILEPATH=%s" % python_library,
-                "-DPython3_SABI_LIBRARY:FILEPATH=%s" % python_library,
+                "-DPython3_SABI_LIBRARY:FILEPATH=%s" % python_sabi_library,
                 "-DWRAP_ITK_INSTALL_COMPONENT_IDENTIFIER:STRING=PythonWheel",
                 "-DWRAP_ITK_INSTALL_COMPONENT_PER_MODULE:BOOL=ON",
                 "-DPY_SITE_PACKAGES_PATH:PATH=.",
@@ -112,6 +113,7 @@ def build_wheel(
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,
@@ -169,6 +171,8 @@ def build_wheel(
                     % python_include_dir,
                     "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                     % python_library,
+                    "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
+                    % python_sabi_library,
                     "--config-setting=cmake.define.DOXYGEN_EXECUTABLE:FILEPATH=C:/P/doxygen/doxygen.exe",
                 ]
                 + [
@@ -193,6 +197,7 @@ def build_wheel(
                 python_executable,
                 python_include_dir,
                 python_library,
+                python_sabi_library,
             )
 
             # Build wheels
@@ -234,6 +239,8 @@ def build_wheel(
                         % python_include_dir,
                         "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                         % python_library,
+                        "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
+                        % python_sabi_library,
                     ]
                     + [
                         o.replace("-D", "--config-setting=cmake.define.")
