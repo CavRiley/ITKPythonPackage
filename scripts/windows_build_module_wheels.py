@@ -44,6 +44,7 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
             python_executable,
             python_include_dir,
             python_library,
+            python_sabi_library,
             pip,
             ninja_executable,
             path,
@@ -116,7 +117,7 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
                         "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                         % python_library,
                         "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
-                        % python_library,
+                        % python_sabi_library,
                     ]
                     + [
                         o.replace("-D", "--config-setting=cmake.define.")
@@ -174,6 +175,7 @@ def rename_wheel_init(py_env, filepath, add_module_name=True):
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,

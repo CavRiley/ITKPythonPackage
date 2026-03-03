@@ -298,6 +298,7 @@ def test_wheels(python_env):
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,
