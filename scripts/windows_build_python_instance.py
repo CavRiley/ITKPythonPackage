@@ -218,8 +218,16 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
                 str(self.build_dir_root / "build"),
                 str(self.ipp_dir),
                 "-xr!*.o",
-                "-xr!*.obj",
-                "-xr!*.pdb",
+                "-xr!*.obj",  # Windows equivalent of .o
+                "-xr!wheelbuilds",  # Do not include the wheelbuild support directory
+                "-xr!__pycache__",  # Do not include __pycache__
+                "-xr!install_manifest_*.txt",  # Do not include install manifest files
+                "-xr!.git",  # Exclude git directory
+                "-xr!.idea",  # Exclude IDE directory
+                "-xr!.pixi",  # Exclude pixi environment
+                "-xr!castxml_inputs",
+                "-xr!Wrapping\Modules",
+                "-xr!*.pdb",  # Exclude debug symbols
             ]
             self.echo_check_call(cmd)
         return
