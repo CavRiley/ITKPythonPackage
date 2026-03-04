@@ -159,7 +159,8 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         - Fallback to Python's zip archive creation if 7-Zip is unavailable
         """
 
-        out_zip = self.build_dir_root / "build" / "ITKPythonBuilds-windows.zip"
+        # out_zip = self.build_dir_root / "build" / "ITKPythonBuilds-windows.zip"
+        out_zip = self.build_dir_root / "ITKPythonBuilds-windows.zip"
 
         # 1) Clean IPP/dist contents (do not remove the directory itself)
         dist_dir = self.build_dir_root / "dist"
@@ -207,20 +208,21 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
                 seven_zip = Path(found)
 
         if seven_zip is not None:
-            # Match the PS1: run from C:\P and create archive of IPP directory
-            with push_dir(self.build_dir_root):
-                # Using -t7z in the PS1 but naming .zip; preserve behavior
-                cmd = [
-                    str(seven_zip),
-                    "a",
-                    "-t7z",
-                    "-r",
-                    str(out_zip),
-                    "-w",
-                    str(self.build_dir_root),
-                ]
-                self.echo_check_call(cmd)
-            return
+            cmd = [
+                str(seven_zip),
+                "a",
+                "-t7z",
+                "-r",
+                str(out_zip),
+                str(self.build_dir_root / "ITK"),
+                str(self.build_dir_root / "build"),
+                str(self.ipp_dir),
+                "-xr!*.o",
+                "-xr!*.obj",
+                "-xr!*.pdb",
+            ]
+            self.echo_check_call(cmd)
+        return
 
         # 3) Fallback: create a .zip using Python's shutil
         # This will create a zip archive named ITKPythonBuilds-windows.zip
