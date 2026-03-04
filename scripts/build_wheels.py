@@ -388,9 +388,10 @@ def build_wheels_main() -> None:
 
     # Platform detection
     binary_ext: str = ".exe" if os_name == "windows" else ""
-    # need to look in the environment bin first
+    env_bin_dir: str = "Scripts" if os_name == "windows" else "bin"
+
     os.environ["PATH"] = (
-            str(_ipp_dir_path / ".pixi" / "envs" / args.platform_env / "bin") + os.pathsep +
+            str(_ipp_dir_path / ".pixi" / "envs" / args.platform_env / env_bin_dir) + os.pathsep +
             str(_ipp_dir_path / ".pixi" / "bin") + os.pathsep +
             os.environ.get("PATH", "")
     )
