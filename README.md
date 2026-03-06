@@ -56,7 +56,7 @@ For more control over your builds, skip to [The Build Process](#the-build-proces
 
 ### Prerequisites
 
-- Python 3.9 or later
+- Python 3.10 or later
 - Git
 - Docker (for manylinux builds)
 - [Pixi](https://pixi.sh) package manager
@@ -100,11 +100,11 @@ You can invoke the `build_wheels.py` script directly for more control shown belo
 Available pixi platform build environments:
 
 | Platform | Python Versions |
-|----------|----------------|
-| `linux` | py39, py310, py311 |
-| `manylinux228` | py39, py310, py311 |
-| `macosx` | py39, py310, py311 |
-| `windows` | py39, py310, py311 |
+|----------|--------------|
+| `linux` | py310, py311 |
+| `manylinux228` | py310, py311 |
+| `macosx` | py310, py311 |
+| `windows` | py310, py311 |
 
 
 ```bash
@@ -162,7 +162,8 @@ Run from your ITK external module root:
 bash dockcross-manylinux-download-cache-and-build-module-wheels.sh cp310
 ```
 
-> **Note:** Omit the Python version argument (e.g. `cp310`) to build for all default versions (cp39, cp310, cp311).
+> [!NOTE]
+> Omit the Python version argument (e.g. `cp310`) to build for all default versions (cp310 and cp311).
 
 #### macOS
 
@@ -237,13 +238,21 @@ To see how to build ITK Python Build Caches, see this section:
 
 To build the caches compatible with GitHub Actions CI and the ITKPythonBuilds repository. You can run: 
 
+On Linux and macOS systems
 ```bash
-bash scripts/make_tarballs.sh  # py310 py39 (optionally add specific version of Python) 
+bash scripts/make_tarballs.sh  # py310 (optionally add specific version of Python)
 ```
 
-> **Important:** Build caches embed absolute paths. If you extract a tarball to a different path than it was built with, CMake will fail. Standard build paths for CI/CD are:
+On Windows systems
+```powershell
+.\scripts\make_windows_zip.ps1 # py310 (optionally add specific version of Python)
+```
+
+> [!IMPORTANT]
+> Build caches embed absolute paths. If you extract a tarball to a different path than it was built with, CMake will fail. Standard build paths for CI/CD are:
 > - manylinux (Docker): `/work/ITKPythonPackage-build`
 > - macOS: `/Users/svc-dashboard/D/P/ITKPythonPackage-build`
+> - Windows: `C:\BDR`
 > 
 > This script ensures you are building with the correct conventions
 
