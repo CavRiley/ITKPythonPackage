@@ -1,5 +1,5 @@
 ########################################################################
-# Pull build dependencies and build an ITK external module.
+# Pull build dependencies and build an ITK external module on Windows.
 #
 # This script must be run in an x64 Developer PowerShell.
 # See https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022#developer-powershell
@@ -39,8 +39,7 @@
 #     Colon-delimited list of ITK module dependencies.
 #     Format: `<org>/<module>@<tag>:<org>/<module>@<tag>:...`
 #     Example: `InsightSoftwareConsortium/ITKMeshToPolyData@v0.10.0`
-#     Passed directly to build_wheels.py via --itk-module-deps; dependency
-#     building is handled inside that script, not here.
+#     Passed directly to build_wheels.py via --itk-module-deps.
 #
 # `$env:MODULE_SRC_DIRECTORY`
 #     Path to the ITK external module source. Defaults to the directory
@@ -56,14 +55,6 @@ param (
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Resolve module source directory
-$MODULE_SRC_DIRECTORY = if ($env:MODULE_SRC_DIRECTORY) {
-  $env:MODULE_SRC_DIRECTORY
-} else {
-  $PSScriptRoot
-}
-echo "MODULE_SRC_DIRECTORY: $MODULE_SRC_DIRECTORY"
-
 # Validate required inputs
 if (-not $python_version_minor) {
   Write-Error "ERROR: -python_version_minor is required. Example: -python_version_minor 11"
@@ -74,32 +65,40 @@ if (-not $env:ITK_PACKAGE_VERSION) {
   exit 1
 }
 
-$pythonArch = "64"
-$pythonVersion = "3.$python_version_minor"
-$ITK_PACKAGE_VERSION = $env:ITK_PACKAGE_VERSION
-
-$ITKPYTHONPACKAGE_ORG = if ($env:ITKPYTHONPACKAGE_ORG) { $env:ITKPYTHONPACKAGE_ORG } else { "InsightSoftwareConsortium" }
-$ITKPYTHONPACKAGE_TAG = $env:ITKPYTHONPACKAGE_TAG   # may be empty
-
-$DASHBOARD_BUILD_DIRECTORY = "C:\P"
-
-echo "Python version : $pythonVersion-x$pythonArch"
-echo "ITK_PACKAGE_VERSION: $ITK_PACKAGE_VERSION"
-
-# Install Python if not already present
-$pythonExe = "C:\Python$pythonVersion-x$pythonArch\python.exe"
-if (-not (Test-Path $pythonExe)) {
-  echo "Installing Python $pythonVersion-x$pythonArch ..."
-  iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/scikit-build/scikit-ci-addons/master/windows/install-python.ps1'))
+# Resolve configuration
+$MODULE_SRC_DIRECTORY = if ($env:MODULE_SRC_DIRECTORY) {
+  $env:MODULE_SRC_DIRECTORY
 } else {
-  echo "Python already installed at $pythonExe"
+  $PSScriptRoot
 }
+echo "MODULE_SRC_DIRECTORY: $MODULE_SRC_DIRECTORY"
 
-# Download ITKPythonBuilds archive (skip if already present)
-$zipName           = "ITKPythonBuilds-windows.zip"
-$zipDownloadUrl    = "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/$ITK_PACKAGE_VERSION/$zipName"
-# Use a version-stamped local filename so different versions coexist
-$localZipName      = "ITKPythonBuilds-windows_${ITK_PACKAGE_VERSION}.zip"
+$ITK_PACKAGE_VERSION   = $env:ITK_PACKAGE_VERSION
+$ITKPYTHONPACKAGE_ORG  = if ($env:ITKPYTHONPACKAGE_ORG) { $env:ITKPYTHONPACKAGE_ORG } else { "InsightSoftwareConsortium" }
+$ITKPYTHONPACKAGE_TAG  = if ($env:ITKPYTHONPACKAGE_TAG)  { $env:ITKPYTHONPACKAGE_TAG  } else { "" }
+
+$DASHBOARD_BUILD_DIRECTORY = "C:\BDR"
+$platformEnv = "win-py3$python_version_minor"
+
+echo "Python version     : 3.$python_version_minor"
+echo "ITK_PACKAGE_VERSION: $ITK_PACKAGE_VERSION"
+echo "Platform env       : $platformEnv"
+
+# Install pixi
+# NOTE: Python and Doxygen are provided by the pixi environment; no need to
+#       install them separately here.
+$env:PIXI_HOME = "$DASHBOARD_BUILD_DIRECTORY\.pixi"
+if (-not (Test-Path "$env:PIXI_HOME\bin\pixi.exe")) {
+  echo "Installing pixi..."
+  Invoke-WebRequest -Uri "https://pixi.sh/install.ps1" -OutFile "install-pixi.ps1"
+  powershell -ExecutionPolicy Bypass -File "install-pixi.ps1"
+}
+$env:Path = "$env:PIXI_HOME\bin;$env:Path"
+
+# Download ITKPythonBuilds archive (skip if already cached)
+$zipName        = "ITKPythonBuilds-windows.zip"
+$zipDownloadUrl = "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/$ITK_PACKAGE_VERSION/$zipName"
+$localZipName   = "ITKPythonBuilds-windows_${ITK_PACKAGE_VERSION}.zip"
 
 if (Test-Path $localZipName) {
   echo "Found cached archive: $localZipName -- skipping download."
@@ -109,18 +108,24 @@ if (Test-Path $localZipName) {
 }
 
 # Unpack archive
+# Expected layout after extraction under $DASHBOARD_BUILD_DIRECTORY:
+#   \ITK                          ITK source tree
+#   \build\<cached-itk-build>     pre-built ITK artifacts
+#   \IPP                          ITKPythonPackage scripts
 if (Test-Path $DASHBOARD_BUILD_DIRECTORY) {
   echo "Removing existing build directory: $DASHBOARD_BUILD_DIRECTORY"
   Remove-Item -Recurse -Force $DASHBOARD_BUILD_DIRECTORY
 }
 echo "Extracting archive to $DASHBOARD_BUILD_DIRECTORY ..."
-7z x $localZipName -o"$DASHBOARD_BUILD_DIRECTORY" -aoa -r
+Expand-Archive -Path $localZipName -DestinationPath $DASHBOARD_BUILD_DIRECTORY -Force
 
-# Optional: update ITKPythonPackage build scripts from a specific tag
+# ---------------------------------------------------------------------------
+# Optional: overlay ITKPythonPackage build scripts from a specific tag
+# ---------------------------------------------------------------------------
 if ($ITKPYTHONPACKAGE_TAG) {
   echo "Updating build scripts to $ITKPYTHONPACKAGE_ORG/ITKPythonPackage@$ITKPYTHONPACKAGE_TAG"
 
-  $ippTmpDir = "$DASHBOARD_BUILD_DIRECTORY\IPP-tmp"
+  $ippTmpDir   = "$DASHBOARD_BUILD_DIRECTORY\IPP-tmp"
   $ippCloneUrl = "https://github.com/$ITKPYTHONPACKAGE_ORG/ITKPythonPackage.git"
 
   if (-not (Test-Path "$ippTmpDir\.git")) {
@@ -133,34 +138,28 @@ if ($ITKPYTHONPACKAGE_TAG) {
     git status
   popd
 
-  # Overlay everything from the cloned repo into IPP
   Copy-Item -Recurse -Force "$ippTmpDir\*" "$DASHBOARD_BUILD_DIRECTORY\IPP\"
   Remove-Item -Recurse -Force $ippTmpDir
 }
 
-# Fetch other build-time tools
-# Note: doxygen is provided by the pixi environment; no need to download it here.
-if (-not (Test-Path "grep-win.zip")) {
-  Invoke-WebRequest -Uri "https://data.kitware.com/api/v1/file/5bbf87ba8d777f06b91f27d6/download/grep-win.zip" -OutFile "grep-win.zip"
-}
-7z x grep-win.zip -o"$DASHBOARD_BUILD_DIRECTORY\grep" -aoa -r
-$env:Path += ";$DASHBOARD_BUILD_DIRECTORY\grep"
+# Assemble paths used by build_wheels.py
+$ippDir        = "$DASHBOARD_BUILD_DIRECTORY\IPP"
+$buildScript   = "$ippDir\scripts\build_wheels.py"
+# build_wheels.py expects the cached ITK build at <build-dir-root>\build\ITK-windows-py3XX-...
+# Since the zip extracts directly into BDR (i.e. BDR\build\ITK-windows-py311-...), BDR is the root.
+$buildDirRoot  = $DASHBOARD_BUILD_DIRECTORY
+$itkSourceDir  = "$DASHBOARD_BUILD_DIRECTORY\ITK"
+$moduleDepsDir = "$DASHBOARD_BUILD_DIRECTORY\MDEPS"
 
-# Assemble the build command
-$buildScript  = "$DASHBOARD_BUILD_DIRECTORY\IPP\scripts\build_wheels.py"
-$buildDirRoot = "$DASHBOARD_BUILD_DIRECTORY\IPP-build"
-$itkSourceDir = "$buildDirRoot\ITK"
-$moduleDepsDir = "$DASHBOARD_BUILD_DIRECTORY\MODULE_DEPENDENCIES"
-$platformEnv  = "win-py3$python_version_minor"
-
-$build_command  = "& `"$pythonExe`" `"$buildScript`""
+# Build the module wheel via pixi
+$build_command  = "pixi run -e `"$platformEnv`" --manifest-path `"$ippDir\pixi.toml`" python `"$buildScript`""
 $build_command += " --platform-env `"$platformEnv`""
 $build_command += " --module-source-dir `"$MODULE_SRC_DIRECTORY`""
 $build_command += " --module-dependencies-root-dir `"$moduleDepsDir`""
 $build_command += " --itk-module-deps `"$env:ITK_MODULE_PREQ`""
 $build_command += " --no-build-itk-tarball-cache"
 $build_command += " --build-dir-root `"$buildDirRoot`""
-$build_command += " --manylinux-version ``"
+$build_command += " --manylinux-version `"`""
 $build_command += " --itk-git-tag `"$ITK_PACKAGE_VERSION`""
 $build_command += " --itk-source-dir `"$itkSourceDir`""
 $build_command += " --itk-package-version `"$ITK_PACKAGE_VERSION`""
@@ -176,10 +175,7 @@ if ($setup_options.Length -gt 0) {
 if ($cmake_options.Length -gt 0) {
   $build_command += " -- $cmake_options"
 }
-echo "Build command: $build_command"
 
-# ---------------------------------------------------------------------------
-# Build the target module
-# ---------------------------------------------------------------------------
+echo "Build command: $build_command"
 echo "Building target module ..."
 iex $build_command
