@@ -78,13 +78,13 @@ $ITKPYTHONPACKAGE_ORG  = if ($env:ITKPYTHONPACKAGE_ORG) { $env:ITKPYTHONPACKAGE_
 $ITKPYTHONPACKAGE_TAG  = if ($env:ITKPYTHONPACKAGE_TAG)  { $env:ITKPYTHONPACKAGE_TAG  } else { "" }
 
 $DASHBOARD_BUILD_DIRECTORY = "C:\BDR"
-$platformEnv = "win-py3$python_version_minor"
+$platformEnv = "windows-py3$python_version_minor"
 
 echo "Python version     : 3.$python_version_minor"
 echo "ITK_PACKAGE_VERSION: $ITK_PACKAGE_VERSION"
 echo "Platform env       : $platformEnv"
 
-# Install pixi
+# Install pixi and required global tools
 # NOTE: Python and Doxygen are provided by the pixi environment; no need to
 #       install them separately here.
 $env:PIXI_HOME = "$DASHBOARD_BUILD_DIRECTORY\.pixi"
@@ -95,7 +95,34 @@ if (-not (Test-Path "$env:PIXI_HOME\bin\pixi.exe")) {
 }
 $env:Path = "$env:PIXI_HOME\bin;$env:Path"
 
-# Download ITKPythonBuilds archive (skip if already cached)
+# Install global packages via pixi for use in this script
+# Note: Using conda-forge packages that are available on Windows
+echo "Installing global tools via pixi..."
+$globalPackages = @(
+  "git",          # Required for cloning ITKPythonPackage repo
+  "m2-zip",       # Archive tools (Windows compatible)
+  "m2-unzip",     # Unzip utility (Windows compatible)
+  "aria2"         # Fast download utility (cross-platform)
+)
+
+foreach ($pkg in $globalPackages) {
+  echo "  Installing $pkg..."
+  try {
+    & pixi global install $pkg
+    if ($LASTEXITCODE -ne 0) {
+      echo "  Warning: Failed to install $pkg (exit code: $LASTEXITCODE)"
+    }
+  } catch {
+    echo "  Warning: Failed to install $pkg - $($_.Exception.Message)"
+  }
+}
+
+# Refresh PATH to include pixi global binaries
+$env:Path = "$env:PIXI_HOME\bin;$env:Path"
+
+# ---------------------------------------------------------------------------
+# Download ITKPythonBuilds archive
+# ---------------------------------------------------------------------------
 $zipName        = "ITKPythonBuilds-windows.zip"
 $zipDownloadUrl = "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/$ITK_PACKAGE_VERSION/$zipName"
 $localZipName   = "ITKPythonBuilds-windows_${ITK_PACKAGE_VERSION}.zip"
@@ -104,7 +131,16 @@ if (Test-Path $localZipName) {
   echo "Found cached archive: $localZipName -- skipping download."
 } else {
   echo "Downloading $zipDownloadUrl ..."
-  Invoke-WebRequest -Uri $zipDownloadUrl -OutFile $localZipName
+
+  # Try   first (faster, resumable), fall back to Invoke-WebRequest
+  $aria2Path = Get-Command aria2c -ErrorAction SilentlyContinue
+  if ($aria2Path) {
+    echo "  Using aria2c for download..."
+    & aria2c -c --file-allocation=none -s 10 -x 10 -o $localZipName $zipDownloadUrl
+  } else {
+    echo "  Using Invoke-WebRequest for download..."
+    Invoke-WebRequest -Uri $zipDownloadUrl -OutFile $localZipName
+  }
 }
 
 # Unpack archive
@@ -112,16 +148,19 @@ if (Test-Path $localZipName) {
 #   \ITK                          ITK source tree
 #   \build\<cached-itk-build>     pre-built ITK artifacts
 #   \IPP                          ITKPythonPackage scripts
+
 if (Test-Path $DASHBOARD_BUILD_DIRECTORY) {
   echo "Removing existing build directory: $DASHBOARD_BUILD_DIRECTORY"
   Remove-Item -Recurse -Force $DASHBOARD_BUILD_DIRECTORY
 }
+
 echo "Extracting archive to $DASHBOARD_BUILD_DIRECTORY ..."
+
+# PowerShell's Expand-Archive is most reliable on Windows
+# For very large archives, consider using external tools if needed
 Expand-Archive -Path $localZipName -DestinationPath $DASHBOARD_BUILD_DIRECTORY -Force
 
-# ---------------------------------------------------------------------------
 # Optional: overlay ITKPythonPackage build scripts from a specific tag
-# ---------------------------------------------------------------------------
 if ($ITKPYTHONPACKAGE_TAG) {
   echo "Updating build scripts to $ITKPYTHONPACKAGE_ORG/ITKPythonPackage@$ITKPYTHONPACKAGE_TAG"
 
@@ -129,19 +168,23 @@ if ($ITKPYTHONPACKAGE_TAG) {
   $ippCloneUrl = "https://github.com/$ITKPYTHONPACKAGE_ORG/ITKPythonPackage.git"
 
   if (-not (Test-Path "$ippTmpDir\.git")) {
-    git clone $ippCloneUrl $ippTmpDir
+    echo "  Cloning repository..."
+    & git clone $ippCloneUrl $ippTmpDir
   }
 
   pushd $ippTmpDir
-    git checkout $ITKPYTHONPACKAGE_TAG
-    git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
-    git status
+    echo "  Checking out $ITKPYTHONPACKAGE_TAG..."
+    & git checkout $ITKPYTHONPACKAGE_TAG
+    & git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
+    & git status
   popd
 
+  echo "  Copying updated scripts..."
   Copy-Item -Recurse -Force "$ippTmpDir\*" "$DASHBOARD_BUILD_DIRECTORY\IPP\"
   Remove-Item -Recurse -Force $ippTmpDir
 }
 
+# Build the module wheel
 # Assemble paths used by build_wheels.py
 $ippDir        = "$DASHBOARD_BUILD_DIRECTORY\IPP"
 $buildScript   = "$ippDir\scripts\build_wheels.py"
@@ -152,14 +195,17 @@ $itkSourceDir  = "$DASHBOARD_BUILD_DIRECTORY\ITK"
 $moduleDepsDir = "$DASHBOARD_BUILD_DIRECTORY\MDEPS"
 
 # Build the module wheel via pixi
-$build_command  = "pixi run -e `"$platformEnv`" --manifest-path `"$ippDir\pixi.toml`" python `"$buildScript`""
+$build_command  = "pixi run -e `"$platformEnv`" python `"$buildScript`""
 $build_command += " --platform-env `"$platformEnv`""
 $build_command += " --module-source-dir `"$MODULE_SRC_DIRECTORY`""
 $build_command += " --module-dependencies-root-dir `"$moduleDepsDir`""
-$build_command += " --itk-module-deps `"$env:ITK_MODULE_PREQ`""
+
+if ($env:ITK_MODULE_PREQ) {
+    $build_command += " --itk-module-deps `"$env:ITK_MODULE_PREQ`""
+}
+
 $build_command += " --no-build-itk-tarball-cache"
 $build_command += " --build-dir-root `"$buildDirRoot`""
-$build_command += " --manylinux-version `"`""
 $build_command += " --itk-git-tag `"$ITK_PACKAGE_VERSION`""
 $build_command += " --itk-source-dir `"$itkSourceDir`""
 $build_command += " --itk-package-version `"$ITK_PACKAGE_VERSION`""
