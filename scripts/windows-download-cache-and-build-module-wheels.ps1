@@ -168,6 +168,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 # Optional: overlay ITKPythonPackage build scripts from a specific tag
+# Optional: overlay ITKPythonPackage build scripts from a specific tag
 if ($ITKPYTHONPACKAGE_TAG) {
   echo "Updating build scripts to $ITKPYTHONPACKAGE_ORG/ITKPythonPackage@$ITKPYTHONPACKAGE_TAG"
 
@@ -176,14 +177,21 @@ if ($ITKPYTHONPACKAGE_TAG) {
 
   if (-not (Test-Path "$ippTmpDir\.git")) {
     echo "  Cloning repository..."
-    & git clone $ippCloneUrl $ippTmpDir
+    # Use pixi global run, not pixi run
+    & pixi global run git clone $ippCloneUrl $ippTmpDir
+
+    # Check if clone succeeded
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $ippTmpDir)) {
+      Write-Error "Failed to clone ITKPythonPackage repository"
+      exit 1
+    }
   }
 
   pushd $ippTmpDir
     echo "  Checking out $ITKPYTHONPACKAGE_TAG..."
-    & git checkout $ITKPYTHONPACKAGE_TAG
-    & git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
-    & git status
+    & pixi global run git checkout $ITKPYTHONPACKAGE_TAG
+    & pixi global run git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
+    & pixi global run git status
   popd
 
   echo "  Copying updated scripts..."
