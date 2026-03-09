@@ -125,7 +125,7 @@ $env:Path = "$env:PIXI_HOME\bin;$env:Path"
 # ---------------------------------------------------------------------------
 $zipName        = "ITKPythonBuilds-windows.zip"
 $zipDownloadUrl = "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/$ITK_PACKAGE_VERSION/$zipName"
-$localZipName   = "ITKPythonBuilds-windows_${ITK_PACKAGE_VERSION}.zip"
+$localZipName   = "ITKPythonBuilds-windows.zip"
 
 if (Test-Path $localZipName) {
   echo "Found cached archive: $localZipName -- skipping download."
@@ -155,11 +155,18 @@ if (Test-Path $DASHBOARD_BUILD_DIRECTORY) {
 }
 
 echo "Extracting archive to $DASHBOARD_BUILD_DIRECTORY ..."
+# Use 7-Zip to extract (matches the format it was created in)
+$sevenZipPath = "C:\Program Files\7-Zip\7z.exe"
+if (-not (Test-Path $sevenZipPath)) {
+    Write-Error "7-Zip not found at $sevenZipPath. Please install 7-Zip."
+    exit 1
+}
 
-# PowerShell's Expand-Archive is most reliable on Windows
-# For very large archives, consider using external tools if needed
-Expand-Archive -Path $localZipName -DestinationPath $DASHBOARD_BUILD_DIRECTORY -Force
-
+& $sevenZipPath x $localZipName -o"$DASHBOARD_BUILD_DIRECTORY" -y
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to extract archive (exit code: $LASTEXITCODE)"
+    exit 1
+}
 # Optional: overlay ITKPythonPackage build scripts from a specific tag
 if ($ITKPYTHONPACKAGE_TAG) {
   echo "Updating build scripts to $ITKPYTHONPACKAGE_ORG/ITKPythonPackage@$ITKPYTHONPACKAGE_TAG"
