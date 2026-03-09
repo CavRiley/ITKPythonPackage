@@ -177,6 +177,19 @@ Run from your module root:
 bash macpython-download-cache-and-build-module-wheels.sh 3.10
 ```
 
+#### Windows
+
+Use `windows-download-cache-and-build-module-wheels.ps1`. This script:
+1. Installs required tools (git, aria2) via Pixi if not present
+2. Downloads and extracts the Windows ITK binary zip file
+3. Builds your module wheels for each requested Python version
+
+Run from your module root:
+```powershell
+.\windows-download-cache-and-build-module-wheels.ps1 3.11
+```
+
+
 #### Output
 
 Finished wheels are placed in `<your-module>/dist/`.
@@ -211,7 +224,7 @@ Key environment variables:
 | `MANYLINUX_VERSION` | `_2_28`                                 | Manylinux standard to target |
 | `IMAGE_TAG` | `20250913-6ea98ba`                      | Dockcross image tag |
 
-#### Linux/macOS — building ITK from source
+#### Linux/macOS/Windows — building ITK from source
 
 Use `build_wheels.py` directly with `--itk-source-dir`:
 
