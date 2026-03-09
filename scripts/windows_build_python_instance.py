@@ -47,7 +47,7 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         )
 
         self.cmake_itk_source_build_configurations.set(
-            "ITK_BINARY_DIR:PATH", itk_binary_build_name
+            "ITK_BINARY_DIR:PATH", str(itk_binary_build_name)
         )
 
         # Keep values consistent with prior quoting behavior
@@ -259,35 +259,36 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
                 return None
             return 3, int(m.group("minor"))
 
-        # Create venv related paths
-        # On windows use base python interpreter, and not a virtual env
-        primary_python_base_dir: Path = Path(
-            self.package_env_config["PYTHON_EXECUTABLE"]
-        ).parent.parent
-        venv_base_dir: Path = primary_python_base_dir
-        venv_bin_path: Path = Path(self.package_env_config["PYTHON_EXECUTABLE"]).parent
+        # Get the python executable path
+        python_exe = Path(self.package_env_config["PYTHON_EXECUTABLE"])
 
-        python_include_dir = primary_python_base_dir / "include"
+        # For the pixi environment structure:
+        # python.exe is at: <env>/python.exe
+        # Headers are at: <env>/include/
+        # Libraries are at: <env>/libs/
+        env_root = python_exe.parent  # C:/BDR/IPP/.pixi/envs/windows-py311
+
+        venv_bin_path = env_root  # Where python.exe is
+        venv_base_dir = env_root
+
+        # Python development files are directly under env root
+        python_include_dir = env_root / "include"
+
         python_major, python_minor = get_python_version(self.platform_env)
         if python_minor >= 11:
-            # Stable ABI
-            python_library = (
-                primary_python_base_dir / "libs" / f"python{python_major}.lib"
-            )
+            # Stable ABI (python3.lib for 3.11+)
+            python_library = env_root / "libs" / f"python{python_major}.lib"
         else:
-            # It should be possible to query skbuild for the library dir associated
-            # with a given interpreter.
+            # Version-specific (python39.lib, python310.lib, etc.)
             xy_lib_ver = f"{python_major}{python_minor}"
-            python_library = (
-                primary_python_base_dir / "libs" / f"python{xy_lib_ver}.lib"
-            )
+            python_library = env_root / "libs" / f"python{xy_lib_ver}.lib"
 
         self.venv_info_dict = {
-            "python_include_dir": python_include_dir,
-            "python_library": python_library,
-            "venv_bin_path": venv_bin_path,
-            "venv_base_dir": venv_base_dir,
-            "python_root_dir": primary_python_base_dir,
+            "python_include_dir": python_include_dir,  # .../windows-py311/include
+            "python_library": python_library,  # .../windows-py311/libs/python3.lib
+            "venv_bin_path": venv_bin_path,  # .../windows-py311
+            "venv_base_dir": venv_base_dir,  # .../windows-py311
+            "python_root_dir": env_root,  # .../windows-py311
         }
 
     def discover_python_venvs(
