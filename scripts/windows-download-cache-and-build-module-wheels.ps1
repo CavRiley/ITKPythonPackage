@@ -100,8 +100,6 @@ $env:Path = "$env:PIXI_HOME\bin;$env:Path"
 echo "Installing global tools via pixi..."
 $globalPackages = @(
   "git",          # Required for cloning ITKPythonPackage repo
-  "m2-zip",       # Archive tools (Windows compatible)
-  "m2-unzip",     # Unzip utility (Windows compatible)
   "aria2"         # Fast download utility (cross-platform)
 )
 
@@ -149,11 +147,6 @@ if (Test-Path $localZipName) {
 #   \build\<cached-itk-build>     pre-built ITK artifacts
 #   \IPP                          ITKPythonPackage scripts
 
-if (Test-Path $DASHBOARD_BUILD_DIRECTORY) {
-  echo "Removing existing build directory: $DASHBOARD_BUILD_DIRECTORY"
-  Remove-Item -Recurse -Force $DASHBOARD_BUILD_DIRECTORY
-}
-
 echo "Extracting archive to $DASHBOARD_BUILD_DIRECTORY ..."
 # Use 7-Zip to extract (matches the format it was created in)
 $sevenZipPath = "C:\Program Files\7-Zip\7z.exe"
@@ -168,7 +161,8 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 # Optional: overlay ITKPythonPackage build scripts from a specific tag
-# Optional: overlay ITKPythonPackage build scripts from a specific tag
+cd "$DASHBOARD_BUILD_DIRECTORY\IPP"
+$env:PATH += ";C:\Program Files\Git\bin"
 if ($ITKPYTHONPACKAGE_TAG) {
   echo "Updating build scripts to $ITKPYTHONPACKAGE_ORG/ITKPythonPackage@$ITKPYTHONPACKAGE_TAG"
 
@@ -177,8 +171,7 @@ if ($ITKPYTHONPACKAGE_TAG) {
 
   if (-not (Test-Path "$ippTmpDir\.git")) {
     echo "  Cloning repository..."
-    # Use pixi global run, not pixi run
-    & pixi global run git clone $ippCloneUrl $ippTmpDir
+    & git clone $ippCloneUrl $ippTmpDir
 
     # Check if clone succeeded
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $ippTmpDir)) {
@@ -189,9 +182,9 @@ if ($ITKPYTHONPACKAGE_TAG) {
 
   pushd $ippTmpDir
     echo "  Checking out $ITKPYTHONPACKAGE_TAG..."
-    & pixi global run git checkout $ITKPYTHONPACKAGE_TAG
-    & pixi global run git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
-    & pixi global run git status
+    & git checkout $ITKPYTHONPACKAGE_TAG
+    & git reset "origin/$ITKPYTHONPACKAGE_TAG" --hard
+    & git status
   popd
 
   echo "  Copying updated scripts..."
@@ -209,34 +202,40 @@ $buildDirRoot  = $DASHBOARD_BUILD_DIRECTORY
 $itkSourceDir  = "$DASHBOARD_BUILD_DIRECTORY\ITK"
 $moduleDepsDir = "$DASHBOARD_BUILD_DIRECTORY\MDEPS"
 
-# Build the module wheel via pixi
-$build_command  = "pixi run -e `"$platformEnv`" python `"$buildScript`""
-$build_command += " --platform-env `"$platformEnv`""
-$build_command += " --module-source-dir `"$MODULE_SRC_DIRECTORY`""
-$build_command += " --module-dependencies-root-dir `"$moduleDepsDir`""
+# Instead of building a string and using iex, build an argument array
+$buildArgs = @(
+  "run", "-e", $platformEnv,
+  "python", $buildScript,
+  "--platform-env", $platformEnv,
+  "--module-source-dir", $MODULE_SRC_DIRECTORY,
+  "--module-dependencies-root-dir", $moduleDepsDir
+)
 
 if ($env:ITK_MODULE_PREQ) {
-    $build_command += " --itk-module-deps `"$env:ITK_MODULE_PREQ`""
+    $buildArgs += @("--itk-module-deps", $env:ITK_MODULE_PREQ)
 }
 
-$build_command += " --no-build-itk-tarball-cache"
-$build_command += " --build-dir-root `"$buildDirRoot`""
-$build_command += " --itk-git-tag `"$ITK_PACKAGE_VERSION`""
-$build_command += " --itk-source-dir `"$itkSourceDir`""
-$build_command += " --itk-package-version `"$ITK_PACKAGE_VERSION`""
-$build_command += " --itk-pythonpackage-org `"$ITKPYTHONPACKAGE_ORG`""
-$build_command += " --itk-pythonpackage-tag `"$ITKPYTHONPACKAGE_TAG`""
-$build_command += " --no-use-ccache"
-$build_command += " --skip-itk-build"
-$build_command += " --skip-itk-wheel-build"
+$buildArgs += @(
+  "--no-build-itk-tarball-cache",
+  "--build-dir-root", $buildDirRoot,
+  "--itk-git-tag", $ITK_PACKAGE_VERSION,
+  "--itk-source-dir", $itkSourceDir,
+  "--itk-package-version", $ITK_PACKAGE_VERSION,
+  "--itk-pythonpackage-org", $ITKPYTHONPACKAGE_ORG,
+  "--itk-pythonpackage-tag", $ITKPYTHONPACKAGE_TAG,
+  "--no-use-ccache",
+  "--skip-itk-build",
+  "--skip-itk-wheel-build"
+)
 
 if ($setup_options.Length -gt 0) {
-  $build_command += " $setup_options"
-}
-if ($cmake_options.Length -gt 0) {
-  $build_command += " -- $cmake_options"
+  $buildArgs += $setup_options.Split(" ")
 }
 
-echo "Build command: $build_command"
-echo "Building target module ..."
-iex $build_command
+if ($cmake_options.Length -gt 0) {
+  $buildArgs += @("--")
+  $buildArgs += $cmake_options.Split(" ")
+}
+
+echo "Building target module..."
+& pixi @buildArgs
