@@ -225,8 +225,9 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
                 "-xr!Wrapping\Modules",
                 "-xr!*.pdb",  # Exclude debug symbols
             ]
-            self.echo_check_call(cmd)
-        return
+            return_status: int = self.echo_check_call(cmd)
+            if return_status == 0:
+                return
 
         # 3) Fallback: create a .zip using Python's shutil
         # This will create a zip archive named ITKPythonBuilds-windows.zip
