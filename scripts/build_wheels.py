@@ -26,8 +26,8 @@ def remotemodulebuildandtestaction() -> dict[str, str]:
     # to help define compatibility between the different build environments.
     itk_remote_module_build_test_package_action_env_mapping: dict[str, str] = {
         "ITK_PACKAGE_VERSION": "inputs.itk-wheel-tag",  #
-        "ITKPYTHONPACKAGE_TAG": "inputs.itk-python-package-tag",  #
-        "ITKPYTHONPACKAGE_ORG": "inputs.itk-python-package-org",  #
+        # "ITKPYTHONPACKAGE_TAG": "inputs.itk-python-package-tag",  # used in github actions scripts only
+        # "ITKPYTHONPACKAGE_ORG": "inputs.itk-python-package-org",  # used in github actions scripts only
         "ITK_MODULE_PREQ": "inputs.itk-module-deps",  #
         "CMAKE_OPTIONS": "inputs.cmake-options",  #
         "MANYLINUX_PLATFORM": "matrix.manylinux-platform",  # --- No longer used, computed internally
@@ -267,35 +267,6 @@ def build_wheels_main() -> None:
        """,
     )
 
-    parser.add_argument(
-        "--itk-pythonpackage-org",
-        type=str,
-        default=remote_module_build_dict["ITKPYTHONPACKAGE_ORG"],
-        help="""
-         - 'ITKPYTHONPACKAGE_ORG':Github organization or user to use for ITKPythonPackage build scripts
-           Which script version to use in generating python packages
-           https://github.com/InsightSoftwareConsortium/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git@${ITKPYTHONPACKAGE_TAG}
-           build script source. Default is InsightSoftwareConsortium.
-           Ignored if ITKPYTHONPACKAGE_TAG is empty.
-           (in github action ITKRemoteModuleBuildTestPackage itk-python-package-org is used to set this value)
-         """,
-    )
-
-    # This may not be necessary any longer.  Will review later
-    parser.add_argument(
-        "--itk-pythonpackage-tag",
-        type=str,
-        default=remote_module_build_dict["ITKPYTHONPACKAGE_TAG"],
-        help="""
-             - 'ITKPYTHONPACKAGE_TAG': The source code tag for ITKPythonPackage to use
-               Which script version to use in generating python packages
-               https://github.com/InsightSoftwareConsortium/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git@${ITKPYTHONPACKAGE_TAG}
-               build script source. Default is InsightSoftwareConsortium.
-               Ignored if ITKPYTHONPACKAGE_TAG is empty.
-               (in github action ITKRemoteModuleBuildTestPackage itk-python-package-org is used to set this value)
-             """,
-    )
-
     if os_name == "darwin":
         parser.add_argument(
             "--macosx-deployment-target",
@@ -475,8 +446,6 @@ def build_wheels_main() -> None:
     package_env_config["ITK_GIT_TAG"] = args.itk_git_tag
     package_env_config["ITK_SOURCE_DIR"] = args.itk_source_dir
     package_env_config["ITK_PACKAGE_VERSION"] = args.itk_package_version
-    package_env_config["ITKPYTHONPACKAGE_ORG"] = args.itk_pythonpackage_org
-    package_env_config["ITKPYTHONPACKAGE_TAG"] = args.itk_pythonpackage_tag
     if os_name == "darwin":
         package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macosx_deployment_target
     else:

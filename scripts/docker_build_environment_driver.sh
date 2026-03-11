@@ -63,8 +63,6 @@ for py_indicator in ${PY_ENVS}; do
       --itk-source-dir ${CONTAINER_ITK_SOURCE_DIR} \
       --itk-git-tag "${ITK_GIT_TAG}" \
       --manylinux-version "${MANYLINUX_VERSION}" \
-      --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
-      --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
       --no-use-sudo \
       --no-use-ccache \
       --skip-itk-build \
@@ -79,8 +77,6 @@ for py_indicator in ${PY_ENVS}; do
       --itk-source-dir ${CONTAINER_ITK_SOURCE_DIR} \
       --itk-git-tag "${ITK_GIT_TAG}" \
       --manylinux-version "${MANYLINUX_VERSION}" \
-      --itk-pythonpackage-org "${ITKPYTHONPACKAGE_ORG}" \
-      --itk-pythonpackage-tag "${ITKPYTHONPACKAGE_TAG}" \
       --no-use-sudo \
       --no-use-ccache
   fi

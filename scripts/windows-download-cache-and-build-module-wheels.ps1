@@ -221,8 +221,6 @@ $buildArgs += @(
   "--itk-git-tag", $ITK_PACKAGE_VERSION,
   "--itk-source-dir", $itkSourceDir,
   "--itk-package-version", $ITK_PACKAGE_VERSION,
-  "--itk-pythonpackage-org", $ITKPYTHONPACKAGE_ORG,
-  "--itk-pythonpackage-tag", $ITKPYTHONPACKAGE_TAG,
   "--no-use-ccache",
   "--skip-itk-build",
   "--skip-itk-wheel-build"
