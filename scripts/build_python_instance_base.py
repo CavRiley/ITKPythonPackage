@@ -847,6 +847,8 @@ class BuildPythonInstanceBase(ABC):
 
         Mirrors the historical scripts/*-build-tarball.sh behavior:
         - zstd compress with options (-10 -T6 --long=31)
+
+        Warns if directory structure doesn't match expected layout for GitHub Actions.
         """
         arch_postfix: str = f"{self.package_env_config['ARCH']}"
         # Fixup platform name for macOS, eventually need to standardize on macosx naming convention
@@ -858,13 +860,44 @@ class BuildPythonInstanceBase(ABC):
         zst_path: Path = itk_packaging_reference_dir / f"{tar_name}.zst"
 
         itk_resources_build_dir: Path = self.build_dir_root
-        if "ITKPythonPackage-build" not in itk_resources_build_dir.parts:
-            print(f"Warning: These tarballs will not be compatible with the GitHub Action Runners")
+        ipp_source_dir: Path = self.package_env_config["IPP_SOURCE_DIR"]
+
+        # Validate directory structure and determine tarball strategy
+        issues = []
+
+        # Try to use relative paths first
+        try:
+            rel_build = itk_resources_build_dir.relative_to(itk_packaging_reference_dir)
+            rel_ipp = ipp_source_dir.relative_to(itk_packaging_reference_dir)
+        except ValueError:
+            # Fall back to absolute paths
+            rel_build = itk_resources_build_dir
+            rel_ipp = ipp_source_dir
+            itk_packaging_reference_dir = Path("/")  # Tar from root when using absolute paths
+
+        if itk_resources_build_dir.parent != ipp_source_dir.parent:
+            issues.append("Build and source dirs are not siblings")
+
+        if ipp_source_dir.name != "ITKPythonPackage":
+            issues.append(f"Source dir is '{ipp_source_dir.name}', expected 'ITKPythonPackage'")
+
+        # Issue consolidated warning for compatibility issues
+        if issues:
+            print("\n" + "=" * 70)
+            print("WARNING: Tarball will NOT be compatible with GitHub Actions")
+            print("=" * 70)
+            for issue in issues:
+                print(f"  * {issue}")
+            print("\nExpected structure: <parent>/{ITKPythonPackage, ITKPythonPackage-build}")
+            print(f"Current: Build={itk_resources_build_dir}")
+            print(f"         Source={ipp_source_dir}")
+            print("\nTarball will be created for local reuse but may not work in CI/CD.")
+            print("=" * 70 + "\n")
+
+        # Build tarball include paths
         tarball_include_paths = [
-            itk_resources_build_dir.relative_to(itk_packaging_reference_dir),
-            self.package_env_config["IPP_SOURCE_DIR"].relative_to(
-                itk_packaging_reference_dir
-            ),
+            str(rel_build),
+            str(rel_ipp),
         ]
 
         if tar_path.exists():
@@ -874,12 +907,12 @@ class BuildPythonInstanceBase(ABC):
             print(f"Removing existing zstd tarball {zst_path}")
             zst_path.unlink()
 
-        # Create tarball of
+        # Create tarball
         self.echo_check_call(
             [
                 "tar",
                 "-C",
-                itk_packaging_reference_dir,
+                str(itk_packaging_reference_dir),
                 "-cf",
                 str(tar_path),
                 "--exclude=*.o",
@@ -911,6 +944,10 @@ class BuildPythonInstanceBase(ABC):
                 str(zst_path),
             ]
         )
+
+        print(f"Tarball created: {zst_path}")
+        if issues:
+            print("Compatibility warnings above - review before using in CI/CD")
 
     @abstractmethod
     def get_pixi_environment_name(self):

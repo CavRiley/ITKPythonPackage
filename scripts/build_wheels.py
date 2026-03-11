@@ -374,7 +374,7 @@ def build_wheels_main() -> None:
     package_env_config: dict[str, str | Path | None] = {}
 
     args.build_dir_root = Path(args.build_dir_root)
-    if args.itk_source_dir is None:
+    if str(args.build_dir_root) != str(default_build_dir_root) and str(args.itk_source_dir) == str(default_itk_source_dir):
         args.itk_source_dir = args.build_dir_root / "ITK"
 
     args.itk_source_dir = Path(args.itk_source_dir)
