@@ -6,7 +6,7 @@ script_dir=$(cd $(dirname $0) || exit 1; pwd)
 _ipp_dir=$(dirname ${script_dir})
 
 # If args are given, use them. Otherwise use default python environments
-pyenvs=("${@:-py39 py310 py311}")
+pyenvs=("${@:-py310 py311}")
 
 # Otherwise process mac and linux based on uname
 

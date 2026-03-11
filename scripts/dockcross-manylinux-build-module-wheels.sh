@@ -141,7 +141,7 @@ export LD_LIBRARY_PATH="${DOCKER_LD_LIBRARY_PATH}"
 # To build tarballs in manylinux, use 'export BUILD_WHEELS_EXTRA_FLAGS=" --build-itk-tarball-cache "'
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""} # No tarball by default
 
-PY_ENVS=("${@:-py310}")
+PY_ENVS=("${@:-py310 py311}")
 
 # When building ITK remote wheels, --module-source-dir, --module-dependancies-root-dir, and --itk-module-deps should be present
 cmd=$(echo bash -x ${_local_dockercross_script} \

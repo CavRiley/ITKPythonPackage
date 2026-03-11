@@ -24,7 +24,7 @@
 #   > .\make_tarballs.ps1
 #
 # Restrict to specific python versions by passing them as arguments:
-#   > .\make_tarballs.ps1 py39 py311
+#   > .\make_tarballs.ps1 py311
 #
 # -----------------------------------------------------------------------
 # Environment variables:
@@ -44,7 +44,7 @@ $ErrorActionPreference = "Stop"
 
 # Resolve python environments
 if (-not $pyenvs -or $pyenvs.Count -eq 0) {
-  $pyenvs = @("py39", "py310", "py311")
+  $pyenvs = @("py310", "py311")
 }
 echo "Building for python environments: $($pyenvs -join ', ')"
 
@@ -125,7 +125,7 @@ $env:Path = "$env:PIXI_HOME\bin;$env:Path"
 Push-Location $IPPDir
 try {
   foreach ($pyenv in $pyenvs) {
-    # Normalise any of: py39 / py3.9 / cp39 / 3.9  ->  py39
+    # Normalise any of: py311 / py3.11 / cp311 / 3.11  ->  py311
     $pySquashed  = $pyenv -replace 'py|cp|\.', ''
     $pyenv       = "py$pySquashed"
     $platformEnv = "windows-$pyenv"

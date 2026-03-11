@@ -4,10 +4,6 @@ These functions have been copied from scikit-build project.
 See https://github.com/scikit-build/scikit-build
 """
 
-from __future__ import (
-    annotations,
-)  # Needed for python 3.9 to support python 3.10 style typehints
-
 import filecmp
 import os
 import re

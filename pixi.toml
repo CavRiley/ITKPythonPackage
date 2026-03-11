@@ -111,10 +111,6 @@ c-compiler = "==1.11.0"   # MSVC 2022
 delvewheel = "*"
 # windows = "*"
 
-[feature.py39]
-[feature.py39.dependencies]
-python = ">=3.9,<3.10"
-
 [feature.py310]
 [feature.py310.dependencies]
 python = ">=3.10,<3.11"
@@ -141,17 +137,10 @@ python = ">=3.11,<3.12"
 ########################################
 
 [environments]
-linux-py39 = ["py39", "linux-build", "build-dev-tools", "python-dev-pkgs"]
 linux-py310 = ["py310", "linux-build", "build-dev-tools", "python-dev-pkgs"]
 linux-py311 = ["py311", "linux-build", "build-dev-tools", "python-dev-pkgs"]
 
 # Manylinux wheel-build env (docker manylinux228 images, CI, etc.)
-manylinux228-py39 = [
-  "py39",
-  "manylinux228-build",
-  "build-dev-tools",
-  "python-dev-pkgs",
-]
 manylinux228-py310 = [
   "py310",
   "manylinux228-build",
@@ -166,12 +155,10 @@ manylinux228-py311 = [
 ]
 
 # macOS build env (both Intel and Apple Silicon)
-macosx-py39 = ["py39", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 macosx-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 macosx-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 
 # Windows build env
-windows-py39 = ["py39", "build-dev-tools", "python-dev-pkgs", "windows-build"]
 windows-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "windows-build"]
 windows-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "windows-build"]
 

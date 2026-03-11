@@ -10,7 +10,7 @@
 # Versions can be restricted by passing them in as arguments to the script.
 # For example,
 #
-#   scripts/macpython-download-cache-and-build-module-wheels.sh 3.9 3.11
+#   scripts/macpython-download-cache-and-build-module-wheels.sh 3.11
 #
 # Shared libraries can be included in the wheel by setting DYLD_LIBRARY_PATH before
 # running this script.
@@ -20,7 +20,7 @@
 #
 # These variables are set with the `export` bash command before calling the script.
 # For example,
-#   scripts/macpython-build-module-wheels.sh 3.9 3.10 3.11
+#   scripts/macpython-build-module-wheels.sh 3.10 3.11
 #
 ########################################################################
 DEFAULT_MODULE_DIRECTORY=$(cd $(dirname $0) || exit 1; pwd)

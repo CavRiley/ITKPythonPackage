@@ -111,11 +111,11 @@ if __name__ == "__main__":
         "--platform-env",
         default="default",
         help=(
-            """A platform environment name or path: 
-               linux-py39, linux-py310, linux-py311,
-               manylinux228-py39, manylinux228-py310, manylinux228-py311,
-               windows-py39, windows-py310, windows-py311,
-               macosx-py39, macosx-py310, macosx-py311
+            """A platform environment name or path:
+               linux-py310, linux-py311,
+               manylinux228-py310, manylinux228-py311,
+               windows-py310, windows-py311,
+               macosx-py310, macosx-py311
             """
         ),
     )

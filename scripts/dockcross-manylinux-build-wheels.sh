@@ -84,7 +84,7 @@ DOCKER_ARGS+=" -e PYTHONUNBUFFERED=1 " # Turn off buffering of outputs in python
 BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""} # No tarball by default
 
 # If args are given, use them. Otherwise use default python environments
-PY_ENVS=("${@:-py39 py310 py311}")
+PY_ENVS=("${@:-py310 py311}")
 
 # When building ITK wheels, --module-source-dir, --module-dependancies-root-dir, and --itk-module-deps to be empty
 cmd=$(echo bash -x ${_local_dockercross_script} \
