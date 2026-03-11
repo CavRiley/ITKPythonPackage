@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Iterator, Mapping, Tuple
+from collections.abc import Iterable, Iterator, Mapping
 
 
 def drop_quotes(s: str) -> str:
@@ -29,7 +29,7 @@ class CMakeArgumentBuilder:
 
     def __init__(self, initial: Mapping[str, str] | None = None) -> None:
         # dict preserves insertion order; keep user's order when possible
-        self._defs: Dict[str, str] = dict(initial) if initial else {}
+        self._defs: dict[str, str] = dict(initial) if initial else {}
 
     # Basic mapping helpers (optional convenience)
     def set(self, key: str, value: str) -> None:
@@ -39,7 +39,7 @@ class CMakeArgumentBuilder:
     def get(self, key: str, default: str | None = None) -> str | None:
         return self._defs.get(key, default)
 
-    def update(self, other: Mapping[str, str] | Iterable[Tuple[str, str]]) -> None:
+    def update(self, other: Mapping[str, str] | Iterable[tuple[str, str]]) -> None:
         if isinstance(other, Mapping):
             self._defs.update(other)
         else:
@@ -55,7 +55,7 @@ class CMakeArgumentBuilder:
     def __iter__(self) -> Iterator[str]:  # pragma: no cover - trivial
         return iter(self._defs)
 
-    def items(self) -> Iterable[Tuple[str, str]]:  # pragma: no cover - trivial
+    def items(self) -> Iterable[tuple[str, str]]:  # pragma: no cover - trivial
         return self._defs.items()
 
     # Renderers

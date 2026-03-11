@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 class BuildManager:
-    """Manage a JSON build report for multi-step runs.
+    """Manage a JSON build report for multistep runs.
 
     - Persists status and timing for each named step.
     - Skips steps that are already marked as completed on subsequent runs.
@@ -71,7 +71,7 @@ class BuildManager:
         if not self.report_path.exists():
             return
         try:
-            with open(self.report_path, "r", encoding="utf-8") as f:
+            with open(self.report_path, encoding="utf-8") as f:
                 existing = json.load(f)
             # Merge existing with current set of steps, preserving statuses
             existing_steps = existing.get("steps", {})

@@ -72,7 +72,7 @@ patchelf = "*"   # Needed for auditwheel
 wheel = "*"
 
 [feature.linux-build.activation.env]
-PYTHONNOUSERSITE = "1"  # Exclude system .local site packages
+PYTHONNOUSERSITE = "1" # Exclude system .local site packages
 
 [feature.manylinux228-build.pypi-dependencies]
 build = "*"
@@ -95,8 +95,8 @@ system-requirements = { macos = "10.7" }
 delocate = "*"
 
 [feature.macosx-build.dependencies]
-cxx-compiler = "==1.10.0"  # XCode 16.0 before castxml required updates
-c-compiler = "==1.10.0"    # XCode 16.0 before castxml required updates
+cxx-compiler = "==1.10.0" # XCode 16.0 before castxml required updates
+c-compiler = "==1.10.0"   # XCode 16.0 before castxml required updates
 #libhwloc = "*" # Needed for tbb
 
 [feature.windows-build]
@@ -173,7 +173,4 @@ taplo = ">=0.8.1,<0.11"
 taplo = "fmt pixi.toml"
 
 [tasks.build-itk-wheels]
-cmd = [
-  "python",
-  "scripts/build_wheels.py",
-]
+cmd = ["python", "scripts/build_wheels.py"]

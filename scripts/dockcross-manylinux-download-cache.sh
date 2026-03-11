@@ -17,8 +17,7 @@
 # -----------------------------------------------------------------------
 # Script argument parsing
 #
-usage()
-{
+usage() {
   echo "Usage:
   dockcross-manylinux-download-cache.sh
     [ -h | --help ]           show usage
@@ -44,31 +43,35 @@ for v in "${required_vars[@]}"; do
     echo "ERROR: Required environment variable '$v' is not set or empty."
   fi
 done
-if [ $_missing_required -ne 0 ]; then
-    exit 1
+if [ "${_missing_required}" -ne 0 ]; then
+  exit 1
 fi
 unset _missing_required
 
-
-FORWARD_ARGS=("$@") # Store arguments to forward them later
 PARSED_ARGS=$(getopt -a -n dockcross-manylinux-download-cache-and-build-module-wheels \
   -o hc:x: --long help,cmake_options:,exclude_libs: -- "$@")
 eval set -- "$PARSED_ARGS"
 
-while :
-do
+while :; do
   case "$1" in
-    -h | --help) usage; break ;;
-    --) shift; break ;;
-    *) echo "Unexpected option: $1.";
-       usage; break ;;
+  -h | --help)
+    usage
+    ;;
+  --)
+    shift
+    break
+    ;;
+  *)
+    echo "Unexpected option: $1."
+    usage
+    ;;
   esac
 done
 
 # -----------------------------------------------------------------------
 # Verify that unzstd binary is available to decompress ITK build archives.
 
-unzstd_exe=`(which unzstd)`
+unzstd_exe=$(which unzstd)
 
 if [[ -z ${unzstd_exe} ]]; then
   echo "ERROR: can not find required binary 'unzstd' "
@@ -85,8 +88,7 @@ TARBALL_NAME="ITKPythonBuilds-manylinux${MANYLINUX_VERSION}-${TARGET_ARCH}.tar"
 if [[ ! -f ${TARBALL_NAME}.zst ]]; then
   echo "Local ITK cache tarball file not found..."
   echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst"
-  curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O
-  if [ $? -ne 0 ]; then
+  if ! curl -L "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst" -O; then
     echo "FAILED Download:"
     echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
     exit 1
@@ -96,12 +98,12 @@ if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
   echo "ERROR: can not find required binary './${TARBALL_NAME}.zst'"
   exit 255
 fi
-${unzstd_exe} --long=31 ./${TARBALL_NAME}.zst -o ${TARBALL_NAME}
+"${unzstd_exe}" --long=31 "./${TARBALL_NAME}.zst" -o "${TARBALL_NAME}"
 
 current_dir=$(pwd)
-echo "Extracting all cache files from ${TARBALL_NAME} in ${current_dir}";
-tar xf ${TARBALL_NAME} --warning=no-unknown-keyword
-rm ${TARBALL_NAME}
+echo "Extracting all cache files from ${TARBALL_NAME} in ${current_dir}"
+tar xf "${TARBALL_NAME}" --warning=no-unknown-keyword
+rm "${TARBALL_NAME}"
 
 # -----------------------------------------------------------------------
 # Optional: Update build scripts
@@ -111,17 +113,18 @@ rm ${TARBALL_NAME}
 # since the archives were generated.
 
 if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
+  # shellcheck disable=SC2153
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
   git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${current_dir}/IPP-tmp"
 
-  pushd "${current_dir}/IPP-tmp/"
-    git checkout "${ITKPYTHONPACKAGE_TAG}"
-    git status
-  popd
+  pushd "${current_dir}/IPP-tmp/" || exit
+  git checkout "${ITKPYTHONPACKAGE_TAG}"
+  git status
+  popd || exit
 
-  rm -rf ${current_dir}/ITKPythonPackage/scripts/
+  rm -rf "${current_dir}/ITKPythonPackage/scripts/"
   rsync -av "${current_dir}"/IPP-tmp/ "${current_dir}/ITKPythonPackage/"
-  rm -rf ${current_dir}/IPP-tmp/
+  rm -rf "${current_dir}/IPP-tmp/"
 fi
 
 if [[ ! -f ${current_dir}/ITKPythonPackage/scripts/dockcross-manylinux-build-module-wheels.sh ]]; then

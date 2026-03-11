@@ -1,22 +1,20 @@
 import os
-import sys
-from abc import ABC, abstractmethod
-
 import shutil
 import subprocess
-from pathlib import Path
+import sys
+from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Callable
-
-from cmake_argument_builder import CMakeArgumentBuilder
+from collections.abc import Callable
+from pathlib import Path
 
 from BuildManager import BuildManager
+from cmake_argument_builder import CMakeArgumentBuilder
 from pyproject_configure import configure_one_pyproject_file
 from wheel_builder_utils import (
     _remove_tree,
     _which,
-    run_commandLine_subprocess,
     get_default_platform_build,
+    run_commandLine_subprocess,
 )
 
 
@@ -76,7 +74,6 @@ class BuildPythonInstanceBase(ABC):
 
         with open(
             IPP_BuildWheelsSupport_DIR / "WHEEL_NAMES.txt",
-            "r",
             encoding="utf-8",
         ) as content:
             self.wheel_names = [
@@ -217,12 +214,20 @@ class BuildPythonInstanceBase(ABC):
         if self.skip_itk_build:
             # Skip these steps if we are in the CI environment
             python_package_build_steps = OrderedDict(
-                ("02_build_wrapped_itk_cplusplus_skipped", (lambda: None)) if k == "02_build_wrapped_itk_cplusplus" else (k, v)
+                (
+                    ("02_build_wrapped_itk_cplusplus_skipped", (lambda: None))
+                    if k == "02_build_wrapped_itk_cplusplus"
+                    else (k, v)
+                )
                 for k, v in python_package_build_steps.items()
             )
         if self.skip_itk_wheel_build:
             python_package_build_steps = OrderedDict(
-                ("03_build_wheels_skipped", (lambda: None)) if k == "03_build_wheels" else (k, v)
+                (
+                    ("03_build_wheels_skipped", (lambda: None))
+                    if k == "03_build_wheels"
+                    else (k, v)
+                )
                 for k, v in python_package_build_steps.items()
             )
 
@@ -231,7 +236,7 @@ class BuildPythonInstanceBase(ABC):
                 f"06_build_external_module_wheel_{self.module_source_dir.name}"
             ] = self.build_external_module_python_wheel
         else:
-            python_package_build_steps[f"06_build_external_module_wheel_skipped"] = (
+            python_package_build_steps["06_build_external_module_wheel_skipped"] = (
                 lambda: None
             )
         if self.build_itk_tarball_cache:
@@ -406,7 +411,7 @@ class BuildPythonInstanceBase(ABC):
     def find_unix_exectable_paths(
         self,
         venv_dir: Path,
-    ) -> tuple[str, str, str, str, str, Path]:
+    ) -> tuple[str, str, str, str, str]:
         python_executable = venv_dir / "bin" / "python"
         if not python_executable.exists():
             raise FileNotFoundError(f"Python executable not found: {python_executable}")
@@ -435,10 +440,10 @@ class BuildPythonInstanceBase(ABC):
         venv_bin_path = venv_dir / "bin"
         return (
             str(python_executable),
-            python_include_dir,
-            python_library,
+            str(python_include_dir),
+            str(python_library),
             str(venv_bin_path),
-            venv_dir,
+            str(venv_dir),
         )
 
     @abstractmethod
@@ -451,7 +456,9 @@ class BuildPythonInstanceBase(ABC):
         pass
 
     @abstractmethod
-    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False):  # pragma: no cover - abstract
+    def fixup_wheel(
+        self, filepath, lib_paths: str = "", remote_module_wheel: bool = False
+    ):  # pragma: no cover - abstract
         pass
 
     @abstractmethod
@@ -593,7 +600,7 @@ class BuildPythonInstanceBase(ABC):
             )
             wheel_configbuild_dir_root.mkdir(parents=True, exist_ok=True)
             configure_one_pyproject_file(
-                self.ipp_dir / "scripts",
+                str(self.ipp_dir / "scripts"),
                 self.package_env_config,
                 wheel_configbuild_dir_root,
                 wheel_name,
@@ -749,7 +756,7 @@ class BuildPythonInstanceBase(ABC):
         normalized = [e for e in normalized if e]
 
         # Build each dependency in order
-        for current_entry, entry in enumerate(normalized):
+        for _current_entry, entry in enumerate(normalized):
             if len(entry) == 0:
                 continue
             print(f"Get dependency module information for {entry}")
@@ -869,13 +876,17 @@ class BuildPythonInstanceBase(ABC):
             # Fall back to absolute paths
             rel_build = itk_resources_build_dir
             rel_ipp = ipp_source_dir
-            itk_packaging_reference_dir = Path("/")  # Tar from root when using absolute paths
+            itk_packaging_reference_dir = Path(
+                "/"
+            )  # Tar from root when using absolute paths
 
         if itk_resources_build_dir.parent != ipp_source_dir.parent:
             issues.append("Build and source dirs are not siblings")
 
         if ipp_source_dir.name != "ITKPythonPackage":
-            issues.append(f"Source dir is '{ipp_source_dir.name}', expected 'ITKPythonPackage'")
+            issues.append(
+                f"Source dir is '{ipp_source_dir.name}', expected 'ITKPythonPackage'"
+            )
 
         # Issue consolidated warning for compatibility issues
         if issues:
@@ -884,10 +895,14 @@ class BuildPythonInstanceBase(ABC):
             print("=" * 70)
             for issue in issues:
                 print(f"  * {issue}")
-            print("\nExpected structure: <parent>/{ITKPythonPackage, ITKPythonPackage-build}")
+            print(
+                "\nExpected structure: <parent>/{ITKPythonPackage, ITKPythonPackage-build}"
+            )
             print(f"Current: Build={itk_resources_build_dir}")
             print(f"         Source={ipp_source_dir}")
-            print("\nTarball will be created for local reuse but may not work in CI/CD.")
+            print(
+                "\nTarball will be created for local reuse but may not work in CI/CD."
+            )
             print("=" * 70 + "\n")
 
         # Build tarball include paths
@@ -999,7 +1014,7 @@ class BuildPythonInstanceBase(ABC):
         cmd = pixi_run_preamble + [str(c) for c in cmd]
         # Prepare a friendly command-line string for display
         try:
-            if isinstance(cmd, (list, tuple)):
+            if isinstance(cmd, list | tuple):
                 display_cmd = " ".join(cmd)
             else:
                 display_cmd = str(cmd)

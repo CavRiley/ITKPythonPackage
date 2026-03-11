@@ -16,7 +16,10 @@
 # ENVIRONMENT VARIABLES: ITKPYTHONPACKAGE_ORG, ITKPYTHONPACKAGE_TAG
 ########################################################################
 
-download_script_dir=$(cd $(dirname $0) || exit 1; pwd)
+download_script_dir=$(
+  cd "$(dirname "$0")" || exit 1
+  pwd
+)
 # if not specified, use the current directory for MODULE_SRC_DIRECTORY
 MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY:=${download_script_dir}}
 # if not specified then use the a dummy MODULE_DEPENDENCIES directory in the build dashboard
@@ -24,8 +27,7 @@ MODULE_DEPS_DIR=${MODULE_DEPS_DIR:=${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENC
 # -----------------------------------------------------------------------
 # Script argument parsing
 #
-usage()
-{
+usage() {
   echo "Usage:
   dockcross-manylinux-download-cache-and-build-module-wheels
     [ -h | --help ]           show usage
@@ -40,15 +42,27 @@ PARSED_ARGS=$(getopt -a -n dockcross-manylinux-download-cache-and-build-module-w
   -o hc:x: --long help,cmake_options:,exclude_libs: -- "$@")
 eval set -- "$PARSED_ARGS"
 
-while :
-do
+while :; do
   case "$1" in
-    -h | --help) usage; break ;;
-    -c | --cmake_options) CMAKE_OPTIONS="$2" ; shift 2 ;;
-    -x | --exclude_libs) EXCLUDE_LIBS="$2" ; shift 2 ;;
-    --) shift; break ;;
-    *) echo "Unexpected option: $1.";
-       usage; break ;;
+  -h | --help)
+    usage
+    ;;
+  -c | --cmake_options)
+    export CMAKE_OPTIONS="$2"
+    shift 2
+    ;;
+  -x | --exclude_libs)
+    export EXCLUDE_LIBS="$2"
+    shift 2
+    ;;
+  --)
+    shift
+    break
+    ;;
+  *)
+    echo "Unexpected option: $1."
+    usage
+    ;;
   esac
 done
 
@@ -68,22 +82,20 @@ ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG:-main}
 # Download and extract cache
 
 echo "Fetching https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh"
-curl -L https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh -O
+curl -L "https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh" -O
 chmod u+x dockcross-manylinux-download-cache.sh
-_download_cmd=$(echo \
-ITK_GIT_TAG=${ITK_GIT_TAG} \
-ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} \
-ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
-ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
-MANYLINUX_VERSION=${MANYLINUX_VERSION} \
-TARGET_ARCH=${TARGET_ARCH} \
-bash -x \
-${download_script_dir}/dockcross-manylinux-download-cache.sh $1
-)
+_download_cmd="ITK_GIT_TAG=${ITK_GIT_TAG} \
+    ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} \
+    ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
+    ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
+    MANYLINUX_VERSION=${MANYLINUX_VERSION} \
+    TARGET_ARCH=${TARGET_ARCH} \
+    bash -x \
+    ${download_script_dir}/dockcross-manylinux-download-cache.sh $1"
 echo "Running: ${_download_cmd}"
-eval ${_download_cmd}
+eval "${_download_cmd}"
 
-#NOTE: in this scenerio, untarred_ipp_dir is extracted from tarball
+#NOTE: in this scenario, untarred_ipp_dir is extracted from tarball
 #      during ${download_script_dir}/dockcross-manylinux-download-cache.sh
 untarred_ipp_dir=${download_script_dir}/ITKPythonPackage
 
@@ -93,19 +105,17 @@ ITK_SOURCE_DIR=${download_script_dir}/ITKPythonPackage-build/ITK
 # Build module wheels
 
 echo "Building module wheels"
-set -- "${FORWARD_ARGS[@]}"; # Restore initial argument list
+set -- "${FORWARD_ARGS[@]}" # Restore initial argument list
 
-_bld_cmd=$(echo \
-NO_SUDO=${NO_SUDO} \
-LD_LIBRARY_PATH=${LD_LIBRARY_PATH} \
-IMAGE_TAG=${IMAGE_TAG} \
-ITK_SOURCE_DIR=${ITK_SOURCE_DIR} \
-ITK_MODULE_PREQ=${ITK_MODULE_PREQ} \
-ITK_MODULE_NO_CLEANUP=${ITK_MODULE_NO_CLEANUP} \
-MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY} \
-MODULE_DEPS_DIR=${MODULE_DEPS_DIR} \
-MANYLINUX_VERSION=${MANYLINUX_VERSION} \
-${untarred_ipp_dir}/scripts/dockcross-manylinux-build-module-wheels.sh "$@"
-)
+_bld_cmd="NO_SUDO=${NO_SUDO} \
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH} \
+    IMAGE_TAG=${IMAGE_TAG} \
+    ITK_SOURCE_DIR=${ITK_SOURCE_DIR} \
+    ITK_MODULE_PREQ=${ITK_MODULE_PREQ} \
+    ITK_MODULE_NO_CLEANUP=${ITK_MODULE_NO_CLEANUP} \
+    MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY} \
+    MODULE_DEPS_DIR=${MODULE_DEPS_DIR} \
+    MANYLINUX_VERSION=${MANYLINUX_VERSION} \
+    ${untarred_ipp_dir}/scripts/dockcross-manylinux-build-module-wheels.sh $*"
 echo "Running: ${_bld_cmd}"
-eval ${_bld_cmd}
+eval "${_bld_cmd}"

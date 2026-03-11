@@ -23,30 +23,33 @@
 #   scripts/macpython-build-module-wheels.sh 3.10 3.11
 #
 ########################################################################
-DEFAULT_MODULE_DIRECTORY=$(cd $(dirname $0) || exit 1; pwd)
+DEFAULT_MODULE_DIRECTORY=$(
+  cd "$(dirname "$0")" || exit 1
+  pwd
+)
 # if not specified, use the current directory for MODULE_SRC_DIRECTORY
 MODULE_SRC_DIRECTORY=${MODULE_SRC_DIRECTORY:=${DEFAULT_MODULE_DIRECTORY}}
 
 if [ -z "${ITK_PACKAGE_VERSION}" ]; then
-   echo "MUST SET ITK_PACKAGE_VERSION BEFORE RUNNING THIS SCRIPT"
-   exit -1
+  echo "MUST SET ITK_PACKAGE_VERSION BEFORE RUNNING THIS SCRIPT"
+  exit 1
 fi
 
 DASHBOARD_BUILD_DIRECTORY=${DASHBOARD_BUILD_DIRECTORY:=/Users/svc-dashboard/D/P}
 ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG:=InsightSoftwareConsortium}
 # Run build scripts
-if [ -z "${NO_SUDO}" ] || [ ${NO_SUDO} -ne 1 ]; then
-   sudo_exec=sudo
+if [ -z "${NO_SUDO}" ] || [ "${NO_SUDO}" -ne 1 ]; then
+  sudo_exec=sudo
 fi
-if [ ! -d ${DASHBOARD_BUILD_DIRECTORY} ]; then
-  ${sudo_exec} mkdir -p ${DASHBOARD_BUILD_DIRECTORY} && ${sudo_exec} chown $UID:$GID ${DASHBOARD_BUILD_DIRECTORY}
+if [ ! -d "${DASHBOARD_BUILD_DIRECTORY}" ]; then
+  ${sudo_exec} mkdir -p "${DASHBOARD_BUILD_DIRECTORY}" && ${sudo_exec} chown "$UID:$GID" "${DASHBOARD_BUILD_DIRECTORY}"
 fi
-cd ${DASHBOARD_BUILD_DIRECTORY}
+cd "${DASHBOARD_BUILD_DIRECTORY}" || exit
 
 # NOTE: download phase will install pixi in the DASHBOARD_BUILD_DIRECTORY (which is separate from the pixi
 #       environment used by ITKPYthonPackagbe).
 export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/.pixi
-if [ ! -f  ${PIXI_HOME}/.pixi/bin/pixi ]; then
+if [ ! -f "${PIXI_HOME}/.pixi/bin/pixi" ]; then
   # Install pixi
   curl -fsSL https://pixi.sh/install.sh | sh
   # These are the tools needed for cross platform downloads of the ITK build caches stored in https://github.com/InsightSoftwareConsortium/ITKPythonBuilds
@@ -62,15 +65,14 @@ tarball_arch="-$(arch)"
 TARBALL_NAME="ITKPythonBuilds-macosx${tarball_arch}.tar"
 
 if [[ ! -f ${TARBALL_NAME}.zst ]]; then
-    echo "Local ITK cache tarball file not found..."
-    # Fetch ITKPythonBuilds archive containing ITK build artifacts
-    echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
-    curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst -O
-    if [ $? -ne 0 ]; then
-      echo "FAILED Download:"
-      echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
-      exit 1
-    fi
+  echo "Local ITK cache tarball file not found..."
+  # Fetch ITKPythonBuilds archive containing ITK build artifacts
+  echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
+  if ! curl -L "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst" -O; then
+    echo "FAILED Download:"
+    echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
+    exit 1
+  fi
 fi
 
 if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
@@ -78,14 +80,13 @@ if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
   exit 255
 fi
 
-
 local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
 if [[ ! -f ${local_compress_tarball_name} ]]; then
-  aria2c -c --file-allocation=none -d $(dirname ${local_compress_tarball_name}) -o $(basename ${local_compress_tarball_name}) -s 10 -x 10 https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
+  aria2c -c --file-allocation=none -d "$(dirname "${local_compress_tarball_name}")" -o "$(basename "${local_compress_tarball_name}")" -s 10 -x 10 "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
 fi
 local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar
-unzstd --long=31 ${local_compress_tarball_name} -o ${local_tarball_name}
-PATH="$(dirname $(brew list gnu-tar |grep gtar |grep "/bin/")):$PATH"
+unzstd --long=31 "${local_compress_tarball_name}" -o "${local_tarball_name}"
+PATH="$(dirname "$(brew list gnu-tar | grep gtar | grep "/bin/")"):$PATH"
 # Find tar implementation
 if tar --version 2>/dev/null | grep -q "GNU tar"; then
   TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
@@ -93,47 +94,47 @@ else
   TAR_FLAGS=()
 fi
 tar xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
-rm ${local_tarball_name}
+rm "${local_tarball_name}"
 
 # Optional: Update build scripts
 if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
   echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
   local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
-  if [ ! -d ${local_clone_ipp}/.git ]; then
+  if [ ! -d "${local_clone_ipp}/.git" ]; then
     git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
   fi
-  pushd ${local_clone_ipp}
-    git checkout "${ITKPYTHONPACKAGE_TAG}"
-    git reset origin/${ITKPYTHONPACKAGE_TAG} --hard
-    git status
-  popd
+  pushd "${local_clone_ipp}" || exit
+  git checkout "${ITKPYTHONPACKAGE_TAG}"
+  git reset "origin/${ITKPYTHONPACKAGE_TAG}" --hard
+  git status
+  popd || exit
   rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
 fi
 
 echo "Building module wheels"
-cd ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage
-args=$@
+cd "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage" || exit
+args=("$@")
 echo "${args[@]}"
-for py_indicator in ${args[@]}; do
-   # The following line is to convert "py3.11|py311|cp311|3.11" -> py311 normalized form
-   py_squashed_numeric=$(echo "${py_indicator}" |sed 's/py//g' |sed 's/cp//g' |sed 's/\.//g')
-   pyenv=py${py_squashed_numeric}
-   pixi run -e macosx-${pyenv} -- python \
-           ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py \
-           --platform-env macosx-${pyenv} \
-           --lib-paths '' '' \
-           --module-source-dir ${MODULE_SRC_DIRECTORY} \
-           --module-dependencies-root-dir ${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES \
-           --itk-module-deps "${ITK_MODULE_PREQ}" \
-           --no-build-itk-tarball-cache \
-           --build-dir-root ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build \
-           --manylinux-version '' \
-           --itk-git-tag ${ITK_PACKAGE_VERSION} \
-           --itk-source-dir ${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK \
-           --itk-package-version ${ITK_PACKAGE_VERSION} \
-           --no-use-sudo \
-           --no-use-ccache \
-          --skip-itk-build \
-          --skip-itk-wheel-build
-          #Let this be automatically selected --macosx-deployment-target 10.7 \
+for py_indicator in "${args[@]}"; do
+  # The following line is to convert "py3.11|py311|cp311|3.11" -> py311 normalized form
+  py_squashed_numeric=$(echo "${py_indicator}" | sed 's/py//g' | sed 's/cp//g' | sed 's/\.//g')
+  pyenv=py${py_squashed_numeric}
+  pixi run -e "macosx-${pyenv}" -- python \
+    "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/scripts/build_wheels.py" \
+    --platform-env "macosx-${pyenv}" \
+    --lib-paths '' '' \
+    --module-source-dir "${MODULE_SRC_DIRECTORY}" \
+    --module-dependencies-root-dir "${DASHBOARD_BUILD_DIRECTORY}/MODULE_DEPENDENCIES" \
+    --itk-module-deps "${ITK_MODULE_PREQ}" \
+    --no-build-itk-tarball-cache \
+    --build-dir-root "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build" \
+    --manylinux-version '' \
+    --itk-git-tag "${ITK_PACKAGE_VERSION}" \
+    --itk-source-dir "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage-build/ITK" \
+    --itk-package-version "${ITK_PACKAGE_VERSION}" \
+    --no-use-sudo \
+    --no-use-ccache \
+    --skip-itk-build \
+    --skip-itk-wheel-build
+  #Let this be automatically selected --macosx-deployment-target 10.7 \
 done

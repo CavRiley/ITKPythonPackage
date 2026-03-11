@@ -1,19 +1,19 @@
 #!/usr/bin/env python
+import argparse
 import os
+import shlex
 import subprocess
 import sys
-import argparse
-import shlex
 from pathlib import Path
 
 from wheel_builder_utils import (
-    detect_platform,
-    run_commandLine_subprocess,
-    default_manylinux,
-    get_default_platform_build,
-    compute_itk_package_version,
-    resolve_oci_exe,
     _which,
+    compute_itk_package_version,
+    default_manylinux,
+    detect_platform,
+    get_default_platform_build,
+    resolve_oci_exe,
+    run_commandLine_subprocess,
 )
 
 
@@ -22,8 +22,8 @@ def remotemodulebuildandtestaction() -> dict[str, str]:
     # to help define compatibility between the different build environments.
     itk_remote_module_build_test_package_action_env_mapping: dict[str, str] = {
         "ITK_PACKAGE_VERSION": "inputs.itk-wheel-tag",  #
-        # "ITKPYTHONPACKAGE_TAG": "inputs.itk-python-package-tag",  # used in github actions scripts only
-        # "ITKPYTHONPACKAGE_ORG": "inputs.itk-python-package-org",  # used in github actions scripts only
+        # "ITKPYTHONPACKAGE_TAG": "inputs.itk-python-package-tag",  # used in GitHub actions scripts only
+        # "ITKPYTHONPACKAGE_ORG": "inputs.itk-python-package-org",  # used in GitHub actions scripts only
         "ITK_MODULE_PREQ": "inputs.itk-module-deps",  #
         "CMAKE_OPTIONS": "inputs.cmake-options",  #
         "MANYLINUX_PLATFORM": "matrix.manylinux-platform",  # --- No longer used, computed internally
@@ -46,17 +46,6 @@ def remotemodulebuildandtestaction() -> dict[str, str]:
     for key in itk_remote_module_build_test_package_action_env_mapping.keys():
         remote_module_build_dict[key] = os.environ.get(key, default_values[key])
     return remote_module_build_dict
-
-    """
-        ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} ITK_MODULE_PREQ=${ITK_MODULE_PREQ} IPP_DOWNLOAD_GIT_TAG=${IPP_DOWNLOAD_GIT_TAG} IPP_DOWNLOAD_ORG=${IPP_DOWNLOAD_ORG} ./dockcross-manylinux-download-cache-and-build-module-wheels.sh cp3${{ matrix.python3-minor-version }} $CMAKE_OPTIONS
-    """
-
-
-if sys.version_info < (3, 9):
-    sys.stderr.write(
-        "Python 3.9+ required for the python packaging script execution.\n"
-    )
-    sys.exit(1)
 
 
 def in_pixi_env() -> bool:
@@ -130,7 +119,7 @@ def build_wheels_main() -> None:
         "--platform-env",
         default=get_default_platform_build("py311"),
         help=(
-            """A platform environment name or path: 
+            """A platform environment name or path:
                linux-py39, linux-py310, linux-py311,
                manylinux228-py39, manylinux228-py310, manylinux228-py311,
                windows-py39, windows-py310, windows-py311,
@@ -200,7 +189,7 @@ def build_wheels_main() -> None:
         help="Do not build an uploadable tarball.  The tarball can be used as a cache for remote module builds.",
     )
 
-    # set the default build_dir_root to a very short path on windows to avoid path too long errors
+    # set the default build_dir_root to a very short path on Windows to avoid path too long errors
     default_build_dir_root = (
         ipp_dir.parent / "ITKPythonPackage-build"
         if os_name != "windows"
@@ -234,7 +223,7 @@ def build_wheels_main() -> None:
         """,
     )
 
-    # set the default build_dir_root to a very short path on windows to avoid path too long errors
+    # set the default build_dir_root to a very short path on Windows to avoid path too long errors
     default_itk_source_dir = (
         ipp_dir.parent / "ITKPythonPackage-build" / "ITK"
         if os_name != "windows"
@@ -358,19 +347,25 @@ def build_wheels_main() -> None:
     env_bin_dir: str = "Scripts" if os_name == "windows" else "bin"
 
     env_path = _ipp_dir_path / ".pixi" / "envs" / args.platform_env
-    # multiple locations the executables can be at on windows
-    env_subdirs = [env_bin_dir, "Library/bin"] if os_name == "windows" else [env_bin_dir]
+    # multiple locations the executables can be at on Windows
+    env_subdirs = (
+        [env_bin_dir, "Library/bin"] if os_name == "windows" else [env_bin_dir]
+    )
 
-    os.environ["PATH"] = os.pathsep.join([
-        *[str(env_path / d) for d in env_subdirs],
-        str(_ipp_dir_path / ".pixi" / "bin"),
-        os.environ.get("PATH", ""),
-    ])
+    os.environ["PATH"] = os.pathsep.join(
+        [
+            *[str(env_path / d) for d in env_subdirs],
+            str(_ipp_dir_path / ".pixi" / "bin"),
+            os.environ.get("PATH", ""),
+        ]
+    )
     pixi_exec_path: Path = _which("pixi" + binary_ext)
     package_env_config: dict[str, str | Path | None] = {}
 
     args.build_dir_root = Path(args.build_dir_root)
-    if str(args.build_dir_root) != str(default_build_dir_root) and str(args.itk_source_dir) == str(default_itk_source_dir):
+    if str(args.build_dir_root) != str(default_build_dir_root) and str(
+        args.itk_source_dir
+    ) == str(default_itk_source_dir):
         args.itk_source_dir = args.build_dir_root / "ITK"
 
     args.itk_source_dir = Path(args.itk_source_dir)

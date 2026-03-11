@@ -2,7 +2,7 @@
 
 This project configures pyproject.toml files and manages environmental
 variables needed to build ITK Python binary wheels on MacOS, Linux, and Windows platforms.
-Scripts are available for both [ITK infrastructure](https://github.com/insightSoftwareConsortium/ITK) and 
+Scripts are available for both [ITK infrastructure](https://github.com/insightSoftwareConsortium/ITK) and
 ITK external module Python packages.
 
 The Insight Toolkit (ITK) is an open-source, cross-platform system that provides developers
@@ -249,7 +249,7 @@ To see how to build ITK Python Build Caches, see this section:
 
 #### GitHub Compatible Caches
 
-To build the caches compatible with GitHub Actions CI and the ITKPythonBuilds repository. You can run: 
+To build the caches compatible with GitHub Actions CI and the ITKPythonBuilds repository. You can run:
 
 On Linux and macOS systems
 ```bash
@@ -266,7 +266,7 @@ On Windows systems
 > - manylinux (Docker): `/work/ITKPythonPackage-build`
 > - macOS: `/Users/svc-dashboard/D/P/ITKPythonPackage-build`
 > - Windows: `C:\BDR`
-> 
+>
 > This script ensures you are building with the correct conventions
 
 #### Local Caches
@@ -276,7 +276,7 @@ To build caches for local use, you can run the `build_wheels.py` script with the
 </details>
 
 
---- 
+---
 ## Frequently Asked Questions
 
 ### What target platforms and architectures are supported?

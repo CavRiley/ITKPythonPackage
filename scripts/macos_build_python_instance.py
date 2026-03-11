@@ -3,8 +3,9 @@ from os import environ
 from pathlib import Path
 
 from build_python_instance_base import BuildPythonInstanceBase
-
-from wheel_builder_utils import _remove_tree, get_build_name_components_from_platform_env
+from wheel_builder_utils import (
+    _remove_tree,
+)
 
 
 class MacOSBuildPythonInstance(BuildPythonInstanceBase):
@@ -43,10 +44,12 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
             "CMAKE_OSX_ARCHITECTURES:STRING", target_arch
         )
 
-        # check if build was downloaded
-        # TODO: the naming convention should be standardized across tarballs
-        # ex: ITK-macosx-py310-macosx-py310_arm64
-        binaries_path = Path(self.build_dir_root / "build" / f"ITK-{self.platform_env}-{self.platform_env}_{target_arch}")
+        # build will be here if downloaded
+        binaries_path = Path(
+            self.build_dir_root
+            / "build"
+            / f"ITK-{self.platform_env}-{self.platform_env}_{target_arch}"
+        )
 
         if Path(binaries_path).exists():
             itk_binary_build_name = binaries_path
@@ -185,20 +188,24 @@ class MacOSBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
+    def fixup_wheel(
+        self, filepath, lib_paths: str = "", remote_module_wheel: bool = False
+    ) -> None:
         self.remove_apple_double_files()
         # macOS fix-up with delocate (only needed for x86_64)
         if self.package_env_config["ARCH"] != "arm64":
             venv_bin_path = self.venv_info_dict.get("venv_bin_path", None)
             if venv_bin_path:
-                delocate_listdeps = (
-                    f"{venv_bin_path}/delocate-listdeps"
-                )
+                delocate_listdeps = f"{venv_bin_path}/delocate-listdeps"
                 delocate_wheel = f"{venv_bin_path}/delocate-wheel"
                 self.echo_check_call([str(delocate_listdeps), str(filepath)])
                 self.echo_check_call([str(delocate_wheel), str(filepath)])
             else:
-                print("="*20 + "WARNING: Could not find venv binary to delocate wheel" + "="*20)
+                print(
+                    "=" * 20
+                    + "WARNING: Could not find venv binary to delocate wheel"
+                    + "=" * 20
+                )
 
     def remove_apple_double_files(self):
         try:

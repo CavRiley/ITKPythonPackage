@@ -12,17 +12,19 @@
 # For example,
 #   scripts/dockcross-manylinux-build-module-wheels.sh cp39
 #
-script_dir=$(cd $(dirname $0) || exit 1; pwd)
-_ipp_dir=$(dirname ${script_dir})
+script_dir=$(
+  cd "$(dirname "$0")" || exit 1
+  pwd
+)
+_ipp_dir=$(dirname "${script_dir}")
 
 for cand in nerdctl docker podman; do
-  which ${cand} > /dev/null
-  if [ $? -eq 0 ]; then
+  if which "${cand}" >/dev/null; then
     export OCI_EXE=${OCI_EXE:="$cand"}
     break
   fi
 done
-echo "FOUND OCI_EXE=$(which ${OCI_EXE})"
+echo "FOUND OCI_EXE=$(which "${OCI_EXE}")"
 
 #TODO: This needs updating to pass along values to
 ITK_GIT_TAG=${ITK_GIT_TAG:="main"}
@@ -49,19 +51,19 @@ for v in "${required_vars[@]}"; do
     echo "ERROR: Required environment variable '$v' is not set or empty."
   fi
 done
-if [ $_missing_required -ne 0 ]; then
-    exit 1
+if [ "${_missing_required}" -ne 0 ]; then
+  exit 1
 fi
 unset _missing_required
 
-mkdir -p ${_ipp_dir}/build
+mkdir -p "${_ipp_dir}/build"
 _local_dockercross_script=${_ipp_dir}/build/runner_dockcross-${MANYLINUX_VERSION}-x64_${IMAGE_TAG}.sh
-cd $(dirname ${_ipp_dir})
+cd "$(dirname "${_ipp_dir}")" || exit
 
 # Generate dockcross scripts
-$OCI_EXE run \
-             --rm docker.io/dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG} > ${_local_dockercross_script}
-chmod u+x ${_local_dockercross_script}
+"$OCI_EXE" run \
+  --rm "docker.io/dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG}" >"${_local_dockercross_script}"
+chmod u+x "${_local_dockercross_script}"
 
 # Build wheels in dockcross environment
 CONTAINER_WORK_DIR=/work
@@ -70,8 +72,8 @@ CONTAINER_PACKAGE_SCRIPTS_DIR=${CONTAINER_WORK_DIR}/ITKPythonPackage
 CONTAINER_ITK_SOURCE_DIR=${CONTAINER_PACKAGE_BUILD_DIR}/ITK
 
 HOST_PACKAGE_SCRIPTS_DIR=${_ipp_dir}
-HOST_PACKAGE_BUILD_DIR=$(dirname ${_ipp_dir})/ITKPythonPackage-manylinux${MANYLINUX_VERSION}-build
-mkdir -p ${HOST_PACKAGE_BUILD_DIR}
+HOST_PACKAGE_BUILD_DIR=$(dirname "${_ipp_dir}")/ITKPythonPackage-manylinux${MANYLINUX_VERSION}-build
+mkdir -p "${HOST_PACKAGE_BUILD_DIR}"
 
 DOCKER_ARGS="  -v ${HOST_PACKAGE_BUILD_DIR}:${CONTAINER_PACKAGE_BUILD_DIR} "
 DOCKER_ARGS+=" -v ${HOST_PACKAGE_SCRIPTS_DIR}:${CONTAINER_PACKAGE_SCRIPTS_DIR} "
@@ -87,18 +89,17 @@ BUILD_WHEELS_EXTRA_FLAGS=${BUILD_WHEELS_EXTRA_FLAGS:=""} # No tarball by default
 PY_ENVS=("${@:-py310 py311}")
 
 # When building ITK wheels, --module-source-dir, --module-dependancies-root-dir, and --itk-module-deps to be empty
-cmd=$(echo bash -x ${_local_dockercross_script} \
-  -a \"$DOCKER_ARGS\" \
-   /usr/bin/env \
-     PY_ENVS=\"${PY_ENVS}\" \
-     ITK_GIT_TAG=\"${ITK_GIT_TAG}\" \
-     MANYLINUX_VERSION=\"${MANYLINUX_VERSION}\" \
-     IMAGE_TAG=\"${IMAGE_TAG}\" \
-     TARGET_ARCH=\"${TARGET_ARCH}\" \
-     ITKPYTHONPACKAGE_ORG=\"${ITKPYTHONPACKAGE_ORG}\" \
-     ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_TAG}\" \
-     BUILD_WHEELS_EXTRA_FLAGS=\"${BUILD_WHEELS_EXTRA_FLAGS}\" \
-     /bin/bash -x ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/docker_build_environment_driver.sh
-)
+cmd="bash -x ${_local_dockercross_script} \
+    -a \"$DOCKER_ARGS\" \
+    /usr/bin/env \
+    PY_ENVS=\"${PY_ENVS[*]}\" \
+    ITK_GIT_TAG=\"${ITK_GIT_TAG}\" \
+    MANYLINUX_VERSION=\"${MANYLINUX_VERSION}\" \
+    IMAGE_TAG=\"${IMAGE_TAG}\" \
+    TARGET_ARCH=\"${TARGET_ARCH}\" \
+    ITKPYTHONPACKAGE_ORG=\"${ITKPYTHONPACKAGE_ORG}\" \
+    ITKPYTHONPACKAGE_TAG=\"${ITKPYTHONPACKAGE_TAG}\" \
+    BUILD_WHEELS_EXTRA_FLAGS=\"${BUILD_WHEELS_EXTRA_FLAGS}\" \
+    /bin/bash -x ${CONTAINER_PACKAGE_SCRIPTS_DIR}/scripts/docker_build_environment_driver.sh"
 echo "RUNNING: $cmd"
-eval $cmd
+eval "$cmd"

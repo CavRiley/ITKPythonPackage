@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import os
+from pathlib import Path
 
-from wheel_builder_utils import run_commandLine_subprocess, detect_platform
+from wheel_builder_utils import detect_platform, run_commandLine_subprocess
 
 
 def download_and_install_pixi(

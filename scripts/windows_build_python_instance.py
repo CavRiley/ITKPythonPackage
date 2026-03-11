@@ -4,9 +4,7 @@ from os import environ
 from pathlib import Path
 
 from build_python_instance_base import BuildPythonInstanceBase
-
-
-from wheel_builder_utils import push_dir, _remove_tree
+from wheel_builder_utils import _remove_tree
 
 
 class WindowsBuildPythonInstance(BuildPythonInstanceBase):
@@ -125,7 +123,9 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
+    def fixup_wheel(
+        self, filepath, lib_paths: str = "", remote_module_wheel: bool = False
+    ) -> None:
         # Windows fixup_wheel
         lib_paths = lib_paths.strip()
         lib_paths = lib_paths + ";" if lib_paths else ""

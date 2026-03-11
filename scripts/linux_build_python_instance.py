@@ -1,12 +1,13 @@
 import copy
 import os
+import shutil
 from os import environ
 from pathlib import Path
 
 from build_python_instance_base import BuildPythonInstanceBase
-import shutil
-
-from wheel_builder_utils import _remove_tree, get_build_name_components_from_platform_env
+from wheel_builder_utils import (
+    _remove_tree,
+)
 
 
 class LinuxBuildPythonInstance(BuildPythonInstanceBase):
@@ -50,11 +51,7 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             "CMAKE_CXX_COMPILER_TARGET:STRING", target_triple
         )
 
-
-        # check if build was downloaded
-        # TODO: the naming convention should be standardized across tarballs
-        # ex: ITK-cp310-cp310-manylinux_2_28_x64
-
+        # build will be here is downloaded
         itk_binary_build_name: Path = (
             self.build_dir_root
             / "build"
@@ -75,11 +72,10 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
         )
         if manylinux_ver:
             # Repair all produced wheels with auditwheel for packages with so elements (starts with itk_)
-            whl = None
             # cp39-cp39-linux itk_segmentation-6.0.0b2-cp39-cp39-linux_x86_64.whl
             # Extract Python version from platform_env
             if "-" in self.platform_env:
-                # in manylinux case, platform env is manylinux-cp310, for example, dont want anything before '-'
+                # in manylinux case, platform env is manylinux-cp310, for example, don't want anything before '-'
                 py_version = self.platform_env.split("-")[-1]
             else:
                 py_version = self.platform_env
@@ -161,7 +157,9 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
     def final_import_test(self) -> None:
         self._final_import_test_fn(self.platform_env, Path(self.dist_dir))
 
-    def fixup_wheel(self, filepath, lib_paths: str = "", remote_module_wheel: bool = False) -> None:
+    def fixup_wheel(
+        self, filepath, lib_paths: str = "", remote_module_wheel: bool = False
+    ) -> None:
         # Use auditwheel to repair wheels and set manylinux tags
         manylinux_ver = self.package_env_config.get("MANYLINUX_VERSION", "")
         if len(manylinux_ver) > 1:
@@ -179,7 +177,11 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             cmd += [
                 str(filepath),
                 "-w",
-                str(self.module_source_dir / "dist") if remote_module_wheel else str(self.build_dir_root / "dist"),
+                (
+                    str(self.module_source_dir / "dist")
+                    if remote_module_wheel
+                    else str(self.build_dir_root / "dist")
+                ),
             ]
             # Provide LD_LIBRARY_PATH for oneTBB and common system paths
             extra_lib = str(
@@ -203,7 +205,9 @@ class LinuxBuildPythonInstance(BuildPythonInstanceBase):
             # Remove the original linux_*.whl after successful repair
             filepath_obj = Path(filepath)
             if filepath_obj.exists() and "linux_x86_64.whl" in filepath_obj.name:
-                print(f"Removing original linux wheel after repair: {filepath_obj.name}")
+                print(
+                    f"Removing original linux wheel after repair: {filepath_obj.name}"
+                )
                 try:
                     _remove_tree(filepath_obj)
                 except OSError as e:

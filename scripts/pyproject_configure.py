@@ -2,13 +2,12 @@
 import argparse
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
-import shutil
-
-from wheel_builder_utils import read_env_file
 
 from packaging.version import Version
+from wheel_builder_utils import read_env_file
 
 
 def parameter_option(key, option):
