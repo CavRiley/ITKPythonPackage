@@ -10,7 +10,7 @@
 # Versions can be restricted by passing them in as arguments to the script
 # For example,
 #
-#   scripts/dockcross-manylinux-build-module-wheels.sh cp39
+#   scripts/dockcross-manylinux-build-module-wheels.sh cp310
 #
 # ===========================================
 # ENVIRONMENT VARIABLES
@@ -18,9 +18,7 @@
 # These variables are set with the `export` bash command before calling the script.
 # For example,
 #
-#   export ITK_PACKAGE_VERSION="v5.4.0"
-#   export ITKPYTHONPACKAGE_ORG="InsightSoftwareConsortium"
-#   scripts/dockcross-manylinux-download-cache-and-build-module-wheels cp39
+#   scripts/dockcross-manylinux-build-module-wheels.sh cp310
 #
 # `ITKPYTHONPACKAGE_ORG`: Github organization for fetching ITKPythonPackage build scripts.
 #
@@ -40,7 +38,7 @@ usage()
     [ -h | --help ]           show usage
     [ -c | --cmake_options ]  space-delimited string containing CMake options to forward to the module (e.g. \"-DBUILD_TESTING=OFF\")
     [ -x | --exclude_libs ]   semicolon-delimited library names to exclude when repairing wheel (e.g. \"libcuda.so\")
-    [ python_version ]        build wheel for a specific python version. (e.g. cp39)"
+    [ python_version ]        build wheel for a specific python version. (e.g. cp310)"
   exit 2
 }
 

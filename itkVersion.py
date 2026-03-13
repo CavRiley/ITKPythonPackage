@@ -1,7 +1,7 @@
 from packaging.version import Version
 
 # Version needs to be python PEP 440 compliant (no leading v)
-VERSION = '6.0b1'.removeprefix("v")
+VERSION = '6.0b2'.removeprefix("v")
 
 def get_versions():
     """Returns versions for the ITK Python package.

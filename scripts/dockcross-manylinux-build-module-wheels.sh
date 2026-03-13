@@ -10,7 +10,7 @@
 # Versions can be restricted by passing them in as arguments to the script
 # For example,
 #
-#   scripts/dockcross-manylinux-build-module-wheels.sh cp39
+#   scripts/dockcross-manylinux-build-module-wheels.sh cp310
 #
 # ===========================================
 # ENVIRONMENT VARIABLES
@@ -19,7 +19,7 @@
 # For example,
 #
 #   export MANYLINUX_VERSION="_2_28"
-#   scripts/dockcross-manylinux-build-module-wheels.sh cp39
+#   scripts/dockcross-manylinux-build-module-wheels.sh cp310
 #
 # `LD_LIBRARY_PATH`: Shared libraries to be included in the resulting wheel.
 #   For instance, `export LD_LIBRARY_PATH="/path/to/OpenCL.so:/path/to/OpenCL.so.1.2"`

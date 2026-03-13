@@ -5,7 +5,7 @@
 # Versions can be restricted by passing them in as arguments to the script.
 # For example,
 #
-#   /tmp/dockcross-manylinux-x64 manylinux-build-module-wheels.sh cp39
+#   /tmp/dockcross-manylinux-x64 manylinux-build-module-wheels.sh cp310
 #
 # Shared library dependencies can be included in the wheel by mounting them to /usr/lib64 or /usr/local/lib64
 # before running this script.
@@ -23,7 +23,7 @@
 #   export MANYLINUX_VERSION=2014
 #   docker run --rm dockcross/manylinux${MANYLINUX_VERSION}-x64:${IMAGE_TAG} > /tmp/dockcross-manylinux-x64
 #   chmod u+x /tmp/dockcross-manylinux-x64
-#   /tmp/dockcross-manylinux-x64 -e MANYLINUX_VERSION manylinux-build-module-wheels.sh cp39
+#   /tmp/dockcross-manylinux-x64 -e MANYLINUX_VERSION manylinux-build-module-wheels.sh cp310
 #
 
 # -----------------------------------------------------------------------
@@ -36,7 +36,7 @@ usage()
     [ -h | --help ]           show usage
     [ -c | --cmake_options ]  space-separated string of CMake options to forward to the module (e.g. \"--config-setting=cmake.define.BUILD_TESTING=OFF\")
     [ -x | --exclude_libs ]   semicolon-separated library names to exclude when repairing wheel (e.g. \"libcuda.so\")
-    [ python_version ]        build wheel for a specific python version. (e.g. cp39)"
+    [ python_version ]        build wheel for a specific python version. (e.g. cp310)"
   exit 2
 }
 
@@ -83,10 +83,10 @@ for PYBIN in "${PYBINARIES[@]}"; do
     echo "Python3_INCLUDE_DIR:${Python3_INCLUDE_DIR}"
 
     if [[ -e /work/requirements-dev.txt ]]; then
-      ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
+      sudo ${PYBIN}/pip install --upgrade -r /work/requirements-dev.txt
     fi
     if [[ -e /ITKPythonPackage/requirements-dev.txt ]]; then
-      ${PYBIN}/pip install --upgrade -r /ITKPythonPackage/requirements-dev.txt
+      sudo ${PYBIN}/pip install --upgrade -r /ITKPythonPackage/requirements-dev.txt
     fi
     version=$(basename $(dirname ${PYBIN}))
     # Remove "m" -- not present in Python 3.8 and later

@@ -10,7 +10,7 @@
 # For example,
 #
 #   export ITK_PACKAGE_VERSION=v5.4.0
-#   scripts/dockcross-manylinux-set-vars.sh cp39
+#   scripts/dockcross-manylinux-set-vars.sh cp310
 #
 ########################################################################
 
@@ -39,7 +39,7 @@ TARGET_ARCH=${TARGET_ARCH:=x64}
 
 # Specialized manylinux image tag to use for building.
 if [[ ${MANYLINUX_VERSION} == _2_28 && ${TARGET_ARCH} == x64 ]]; then
-  IMAGE_TAG=${IMAGE_TAG:=20250913-6ea98ba}
+  IMAGE_TAG=${IMAGE_TAG:=20260203-3dfb3ff}
 elif [[ ${MANYLINUX_VERSION} == _2_28 && ${TARGET_ARCH} == aarch64 ]]; then
   IMAGE_TAG=${IMAGE_TAG:=2025.08.12-1}
 elif [[ ${MANYLINUX_VERSION} == 2014 ]]; then

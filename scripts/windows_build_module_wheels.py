@@ -44,6 +44,7 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
             python_executable,
             python_include_dir,
             python_library,
+            python_sabi_library,
             pip,
             ninja_executable,
             path,
@@ -88,13 +89,12 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
                     "--config-setting=wheel.py-api=%s" % wheel_py_api,
                     "--config-setting=cmake.define.SKBUILD:BOOL=ON",
                     "--config-setting=cmake.define.PY_SITE_PACKAGES_PATH:PATH=.",
-                    "--config-setting=cmake.args=" "-G Ninja" "",
-                    "--config-setting=cmake.define.CMAKE_BUILD_TYPE:STRING="
-                    "Release"
-                    "",
+                    "--config-setting=cmake.args=-G Ninja",
+                    "--config-setting=cmake.define.CMAKE_BUILD_TYPE:STRING=Release",
                     "--config-setting=cmake.define.CMAKE_MAKE_PROGRAM:FILEPATH=%s"
                     % ninja_executable,
-                    "--config-setting=cmake.define.ITK_DIR:PATH=%s" % itk_build_path,
+                    "--config-setting=cmake.define.ITK_DIR:PATH=%s"
+                    % itk_build_path,
                     "--config-setting=cmake.define.WRAP_ITK_INSTALL_COMPONENT_IDENTIFIER:STRING=PythonWheel",
                     "--config-setting=cmake.define.SWIG_EXECUTABLE:FILEPATH=%s/Wrapping/Generators/SwigInterface/swig/bin/swig.exe"
                     % itk_build_path,
@@ -109,7 +109,7 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
                     "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                     % python_library,
                     "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
-                    % python_library,
+                    % python_sabi_library,
                 ]
                 + [
                     o.replace("-D", "--config-setting=cmake.define.")
@@ -135,6 +135,7 @@ def rename_wheel_init(py_env, filepath, add_module_name=True):
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,
@@ -217,7 +218,7 @@ if __name__ == "__main__":
         "--py-envs",
         nargs="+",
         default=DEFAULT_PY_ENVS,
-        help='Target Python environment versions, e.g. "39-x64".',
+        help='Target Python environment versions, e.g. "310-x64".',
     )
     parser.add_argument(
         "--no-cleanup",

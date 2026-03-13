@@ -60,13 +60,12 @@ def build_wrapped_itk(
     python_executable,
     python_include_dir,
     python_library,
+    python_sabi_library,
 ):
-
     tbb_dir = os.path.join(ROOT_DIR, "oneTBB-prefix", "lib", "cmake", "TBB")
 
     # Build ITK python
     with push_dir(directory=build_path, make_directory=True):
-
         check_call(
             [
                 "cmake",
@@ -84,7 +83,7 @@ def build_wrapped_itk(
                 "-DPython3_INCLUDE_DIR:PATH=%s" % python_include_dir,
                 "-DPython3_INCLUDE_DIRS:PATH=%s" % python_include_dir,
                 "-DPython3_LIBRARY:FILEPATH=%s" % python_library,
-                "-DPython3_SABI_LIBRARY:FILEPATH=%s" % python_library,
+                "-DPython3_SABI_LIBRARY:FILEPATH=%s" % python_sabi_library,
                 "-DWRAP_ITK_INSTALL_COMPONENT_IDENTIFIER:STRING=PythonWheel",
                 "-DWRAP_ITK_INSTALL_COMPONENT_PER_MODULE:BOOL=ON",
                 "-DPY_SITE_PACKAGES_PATH:PATH=.",
@@ -110,18 +109,17 @@ def build_wheel(
     wheel_names=None,
     cmake_options=[],
 ):
-
     (
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,
     ) = venv_paths(python_version)
 
     with push_env(PATH="%s%s%s" % (path, os.pathsep, os.environ["PATH"])):
-
         # Install dependencies
         check_call(
             [
@@ -142,7 +140,6 @@ def build_wheel(
             shutil.rmtree(build_path)
 
         if single_wheel:
-
             print("#")
             print("# Build single ITK wheel")
             print("#")
@@ -174,6 +171,8 @@ def build_wheel(
                     % python_include_dir,
                     "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                     % python_library,
+                    "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
+                    % python_sabi_library,
                     "--config-setting=cmake.define.DOXYGEN_EXECUTABLE:FILEPATH=C:/P/doxygen/doxygen.exe",
                 ]
                 + [
@@ -186,7 +185,6 @@ def build_wheel(
             )
 
         else:
-
             print("#")
             print("# Build multiple ITK wheels")
             print("#")
@@ -199,6 +197,7 @@ def build_wheel(
                 python_executable,
                 python_include_dir,
                 python_library,
+                python_sabi_library,
             )
 
             # Build wheels
@@ -240,6 +239,8 @@ def build_wheel(
                         % python_include_dir,
                         "--config-setting=cmake.define.Python3_LIBRARY:FILEPATH=%s"
                         % python_library,
+                        "--config-setting=cmake.define.Python3_SABI_LIBRARY:FILEPATH=%s"
+                        % python_sabi_library,
                     ]
                     + [
                         o.replace("-D", "--config-setting=cmake.define.")
@@ -297,6 +298,7 @@ def test_wheels(python_env):
         python_executable,
         python_include_dir,
         python_library,
+        python_sabi_library,
         pip,
         ninja_executable,
         path,
@@ -315,14 +317,12 @@ def build_wheels(
     wheel_names=None,
     cmake_options=[],
 ):
-
     for py_env in py_envs:
         prepare_build_env(py_env)
 
     build_type = "Release"
 
     with push_dir(directory=ITK_SOURCE, make_directory=True):
-
         cmake_executable = "cmake.exe"
         tools_venv = os.path.join(ROOT_DIR, "venv-" + py_envs[0])
         ninja_executable = shutil.which("ninja.exe")
@@ -374,7 +374,7 @@ def main(wheel_names=None):
         "--py-envs",
         nargs="+",
         default=DEFAULT_PY_ENVS,
-        help='Target Python environment versions, e.g. "39-x64".',
+        help='Target Python environment versions, e.g. "310-x64".',
     )
     parser.add_argument(
         "--no-cleanup",
