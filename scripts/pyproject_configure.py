@@ -1,47 +1,13 @@
 #!/usr/bin/env python
-
-"""CLI allowing to configure ``pyproject.toml`` found in ``ITKPythonPackage``
-source tree.
-
-Different version of ``pyproject.toml`` can be generated based on the value
-of the `wheel_name` positional parameter.
-
-Usage::
-
-    pyproject_configure.py [-h] [--output-dir OUTPUT_DIR] wheel_name
-
-    positional arguments:
-      wheel_name
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --output-dir OUTPUT_DIR
-                            Output directory for configured 'pyproject.toml'
-                            (default: /work)
-
-
-Accepted values for `wheel_name` are ``itk`` and all values read from
-``WHEEL_NAMES.txt``.
-"""
-
 import argparse
 import os
 import re
+import shutil
 import sys
+from pathlib import Path
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-PARAMETER_OPTION_DEFAULTS = {
-    "indent": 0,
-    "newline_if_set": False,
-    "newline_indent": 0,
-    "remove_line_if_empty": False,
-}
-
-PARAMETER_OPTIONS = {
-    "PYPROJECT_PY_MODULES": {"indent": 8, "newline_if_set": True, "newline_indent": 4},
-    "PYPROJECT_DEPENDENCIES": {"indent": 8, "remove_line_if_empty": True},
-}
+from packaging.version import Version
+from wheel_builder_utils import read_env_file
 
 
 def parameter_option(key, option):
@@ -50,6 +16,22 @@ def parameter_option(key, option):
     If no option is found in `PARAMETER_OPTIONS`, default value from
     `PARAMETER_OPTION_DEFAULTS` is returned.
     """
+    PARAMETER_OPTION_DEFAULTS = {
+        "indent": 0,
+        "newline_if_set": False,
+        "newline_indent": 0,
+        "remove_line_if_empty": False,
+    }
+
+    PARAMETER_OPTIONS = {
+        "PYPROJECT_PY_MODULES": {
+            "indent": 8,
+            "newline_if_set": True,
+            "newline_indent": 4,
+        },
+        "PYPROJECT_DEPENDENCIES": {"indent": 8, "remove_line_if_empty": True},
+    }
+
     default = PARAMETER_OPTION_DEFAULTS.get(option)
     if key not in PARAMETER_OPTIONS.keys():
         return default
@@ -73,7 +55,7 @@ def indent(text, prefix, predicate=None):
 
     def prefixed_lines():
         for line in text.splitlines(True):
-            yield (prefix + line if predicate(line) else line)
+            yield prefix + line if predicate(line) else line
 
     return "".join(prefixed_lines())
 
@@ -82,7 +64,7 @@ def list_to_str(list_, newline=True):
     sep = ", "
     if newline:
         sep = ",\n"
-    return sep.join(['"%s"' % item for item in list_])
+    return sep.join([f'"{item}"' for item in list_])
 
 
 def configure(template_file, parameters, output_file):
@@ -90,12 +72,12 @@ def configure(template_file, parameters, output_file):
     `parameters`.
     """
     updated_lines = []
-    with open(template_file, "r") as file_:
+    with open(template_file) as file_:
         lines = file_.readlines()
         for line in lines:
             append = True
             for key in parameters.keys():
-                value = parameters[key].strip()
+                value = str(parameters[key]).strip()
                 if (
                     key in line
                     and not value
@@ -107,8 +89,10 @@ def configure(template_file, parameters, output_file):
                 value = indent(value, block_indent)
                 newline_indent = " " * parameter_option(key, "newline_indent")
                 if value.strip() and parameter_option(key, "newline_if_set"):
-                    value = "\n%s\n%s" % (value, newline_indent)
-                line = line.replace("@%s@" % key, value)
+                    value = f"\n{value}\n{newline_indent}"
+                line = line.replace(f"@{key}@", value)
+                # Windows paths need to have backslashes escaped preserved in writing of files
+                line = line.replace("\\", "\\\\")
             if append:
                 updated_lines.append(line)
 
@@ -117,16 +101,26 @@ def configure(template_file, parameters, output_file):
 
 
 def from_group_to_wheel(group):
-    return "itk-%s" % group.lower()
+    return f"itk-{group.lower()}"
 
 
-def update_wheel_pyproject_toml_parameters():
-    global PYPROJECT_PY_PARAMETERS
-    for wheel_name in get_wheel_names():
-        params = dict(ITK_PYPROJECT_PY_PARAMETERS)
+def update_wheel_pyproject_toml_parameters(
+    base_params: dict,
+    package_env_config: dict,
+    SCRIPT_NAME: str,
+    wheel_names: list,
+    wheel_dependencies: dict,
+):
+    """Build and return a mapping of wheel_name -> pyproject parameters.
+
+    This function is a pure transformation and does not mutate global state.
+    """
+    PYPROJECT_PY_PARAMETERS = {}
+    for wheel_name in wheel_names:
+        params = dict(base_params)
 
         # generator
-        params["PYPROJECT_GENERATOR"] = "python %s '%s'" % (SCRIPT_NAME, wheel_name)
+        params["PYPROJECT_GENERATOR"] = f"python {SCRIPT_NAME} '{wheel_name}'"
 
         # name
         if wheel_name == "itk-meta":
@@ -182,18 +176,21 @@ def update_wheel_pyproject_toml_parameters():
         # cmake_args
         params["PYPROJECT_CMAKE_ARGS"] = list_to_str(
             [
+                f"-DITK_SOURCE_DIR={package_env_config['ITK_SOURCE_DIR']}",
+                f"-DITK_GIT_TAG:STRING={package_env_config['ITK_GIT_TAG']}",
+                f"-DITK_PACKAGE_VERSION:STRING={package_env_config['ITK_PACKAGE_VERSION']}",
                 "-DITK_WRAP_unsigned_short:BOOL=ON",
                 "-DITK_WRAP_double:BOOL=ON",
                 "-DITK_WRAP_complex_double:BOOL=ON",
                 "-DITK_WRAP_IMAGE_DIMS:STRING=2;3;4",
                 "-DITK_WRAP_DOC:BOOL=ON",
-                "-DITKPythonPackage_WHEEL_NAME:STRING=%s" % wheel_name,
+                f"-DITKPythonPackage_WHEEL_NAME:STRING={wheel_name}",
             ],
             True,
         )
 
         # install_requires
-        wheel_depends = get_wheel_dependencies()[wheel_name]
+        wheel_depends = list(wheel_dependencies[wheel_name])
 
         # py_modules
         if wheel_name != "itk-core":
@@ -205,35 +202,29 @@ def update_wheel_pyproject_toml_parameters():
 
         PYPROJECT_PY_PARAMETERS[wheel_name] = params
 
+    return PYPROJECT_PY_PARAMETERS
 
-def get_wheel_names():
-    with open(os.path.join(SCRIPT_DIR, "WHEEL_NAMES.txt"), "r") as _file:
+
+def get_wheel_names(IPP_BuildWheelsSupport_DIR: str):
+    with open(os.path.join(IPP_BuildWheelsSupport_DIR, "WHEEL_NAMES.txt")) as _file:
         return [wheel_name.strip() for wheel_name in _file.readlines()]
 
 
-def get_version():
-    from itkVersion import get_versions
-
-    version = get_versions()["package-version"]
-    return version
-
-
 def get_py_api():
-    import sys
-
+    # Return empty for Python < 3.11, otherwise a cp tag like 'cp311'
     if sys.version_info < (3, 11):
         return ""
-    else:
-        return "cp" + str(sys.version_info.major) + str(sys.version_info.minor)
+    return f"cp{sys.version_info.major}{sys.version_info.minor}"
 
 
-def get_wheel_dependencies():
-    """Return a dictionary of ITK wheel dependencies."""
+def get_wheel_dependencies(SCRIPT_DIR: str, version: str, wheel_names: list):
+    """Return a dictionary of the ITK wheel dependencies."""
     all_depends = {}
     regex_group_depends = r"set\s*\(\s*ITK\_GROUP\_([a-zA-Z0-9\_\-]+)\_DEPENDS\s*([a-zA-Z0-9\_\-\s]*)\s*"  # noqa: E501
     pattern = re.compile(regex_group_depends)
-    version = get_version()
-    with open(os.path.join(SCRIPT_DIR, "..", "CMakeLists.txt"), "r") as file_:
+    with open(
+        os.path.join(SCRIPT_DIR, "..", "cmake/ITKPythonPackage_BuildWheels.cmake")
+    ) as file_:
         for line in file_.readlines():
             match = re.search(pattern, line)
             if not match:
@@ -246,86 +237,189 @@ def get_wheel_dependencies():
             all_depends[wheel] = _wheel_depends
     all_depends["itk-meta"] = [
         wheel_name + "==" + version
-        for wheel_name in get_wheel_names()
+        for wheel_name in wheel_names
         if wheel_name != "itk-meta"
     ]
     all_depends["itk-meta"].append("numpy")
     return all_depends
 
 
-SCRIPT_DIR = os.path.dirname(__file__)
-SCRIPT_NAME = os.path.basename(__file__)
-
-ITK_PYPROJECT_PY_PARAMETERS = {
-    "PYPROJECT_GENERATOR": "python %s '%s'" % (SCRIPT_NAME, "itk"),
-    "PYPROJECT_NAME": r"itk",
-    "PYPROJECT_VERSION": get_version(),
-    "PYPROJECT_CMAKE_ARGS": r"",
-    "PYPROJECT_PY_API": get_py_api(),
-    "PYPROJECT_PLATLIB": r"true",
-    "PYPROJECT_PY_MODULES": list_to_str(
-        [
-            "itkBase",
-            "itkConfig",
-            "itkExtras",
-            "itkHelpers",
-            "itkLazy",
-            "itkTemplate",
-            "itkTypes",
-            "itkVersion",
-            "itkBuildOptions",
-        ]
-    ),
-    "PYPROJECT_DOWNLOAD_URL": r"https://github.com/InsightSoftwareConsortium/ITK/releases",
-    "PYPROJECT_DESCRIPTION": r"ITK is an open-source toolkit for multidimensional image analysis",  # noqa: E501
-    "PYPROJECT_LONG_DESCRIPTION": r"ITK is an open-source, cross-platform library that "
-    "provides developers with an extensive suite of software "
-    "tools for image analysis. Developed through extreme "
-    "programming methodologies, ITK employs leading-edge "
-    "algorithms for registering and segmenting "
-    "multidimensional scientific images.",
-    "PYPROJECT_EXTRA_KEYWORDS": r'"scientific", "medical", "image", "imaging"',
-    "PYPROJECT_DEPENDENCIES": r"",
-}
-
-PYPROJECT_PY_PARAMETERS = {"itk": ITK_PYPROJECT_PY_PARAMETERS}
-
-update_wheel_pyproject_toml_parameters()
+def build_base_pyproject_parameters(
+    package_env_config: dict, SCRIPT_NAME: str, itk_package_version: str
+):
+    ITK_SOURCE_README: str = os.path.join(
+        package_env_config["ITK_SOURCE_DIR"], "README.md"
+    )
+    """Return the base pyproject parameters for 'itk'."""
+    return {
+        "PYPROJECT_GENERATOR": f"python {SCRIPT_NAME} 'itk'",
+        "PYPROJECT_NAME": r"itk",
+        "PYPROJECT_VERSION": itk_package_version,
+        "PYPROJECT_CMAKE_ARGS": r"",
+        "PYPROJECT_PY_API": get_py_api(),
+        "PYPROJECT_PLATLIB": r"true",
+        "ITK_SOURCE_DIR": package_env_config["ITK_SOURCE_DIR"],
+        "ITK_SOURCE_README": ITK_SOURCE_README,
+        "PYPROJECT_PY_MODULES": list_to_str(
+            [
+                "itkBase",
+                "itkConfig",
+                "itkExtras",
+                "itkHelpers",
+                "itkLazy",
+                "itkTemplate",
+                "itkTypes",
+                "itkVersion",
+                "itkBuildOptions",
+            ]
+        ),
+        "PYPROJECT_DOWNLOAD_URL": r"https://github.com/InsightSoftwareConsortium/ITK/releases",
+        "PYPROJECT_DESCRIPTION": r"ITK is an open-source toolkit for multidimensional image analysis",  # noqa: E501
+        "PYPROJECT_LONG_DESCRIPTION": r"ITK is an open-source, cross-platform library that "
+        "provides developers with an extensive suite of software "
+        "tools for image analysis. Developed through extreme "
+        "programming methodologies, ITK employs leading-edge "
+        "algorithms for registering and segmenting "
+        "multidimensional scientific images.",
+        "PYPROJECT_EXTRA_KEYWORDS": r'"scientific", "medical", "image", "imaging"',
+        "PYPROJECT_DEPENDENCIES": r"",
+    }
 
 
 def main():
-    # Defaults
-    default_output_dir = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
-
     # Parse arguments
+    SCRIPT_DIR = os.path.dirname(__file__)
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="""CLI allowing to configure ``pyproject.toml`` found in the `` ITKPythonPackage ``
+source tree.
+
+Different versions of ``pyproject.toml`` can be generated based on the value
+of the `wheel_name` positional parameter.
+
+Usage::
+
+    pyproject_configure.py [-h] [--output-dir OUTPUT_DIR] wheel_name
+
+    positional arguments:
+      wheel_name
+
+    optional arguments:
+      -h, --help   show this help message and exit
+      --output-dir OUTPUT_DIR
+                            Output directory for configured 'pyproject.toml'
+                            (default: /work)
+
+Accepted values for `wheel_name` are ``itk`` and all values read from
+``WHEEL_NAMES.txt``.
+""",
     )
     parser.add_argument("wheel_name")
     parser.add_argument(
         "--output-dir",
         type=str,
         help="Output directory for configured 'pyproject.toml'",
-        default=default_output_dir,
+        default=os.path.abspath(os.path.join(SCRIPT_DIR, "..")),
+    )
+    parser.add_argument(
+        "--build-dir-root",
+        type=str,
+        default=f"{SCRIPT_DIR}/../",
+        help="The root of the build resources.",
     )
     args = parser.parse_args()
-    template = os.path.join(SCRIPT_DIR, "pyproject.toml.in")
-    if args.wheel_name not in PYPROJECT_PY_PARAMETERS.keys():
-        print("Unknown wheel name '%s'" % args.wheel_name)
+    print(f"Reading configuration settings from {args.env_file}")
+    package_env_config = read_env_file(args.env_file, args.build_dir_root)
+
+    configure_one_pyproject_file(
+        SCRIPT_DIR, package_env_config, args.output_dir, args.wheel_name
+    )
+
+
+def configure_one_pyproject_file(
+    SCRIPT_DIR: str | bytes, package_env_config, output_dir, wheel_name: str = "itk"
+):
+    # Version needs to be python PEP 440 compliant (no leading v)
+    PEP440_VERSION: str = package_env_config["ITK_PACKAGE_VERSION"].removeprefix("v")
+    try:
+        Version(
+            PEP440_VERSION
+        )  # Raise InvalidVersion exception if not PEP 440 compliant
+    except ValueError:
+        print(f"Invalid PEP 440 version: {PEP440_VERSION}")
+        sys.exit(1)
+
+    # Resolve script information locally
+
+    IPP_BuildWheelsSupport_DIR = os.path.join(SCRIPT_DIR, "..", "BuildWheelsSupport")
+    SCRIPT_NAME = os.path.basename(__file__)
+    # Write itkVersion.py file to report ITK version in python.
+    write_itkVersion_py(Path(output_dir) / "itkVersion.py", PEP440_VERSION)
+    # Copy LICENSE file needed for each wheel
+    shutil.copy(Path(IPP_BuildWheelsSupport_DIR) / "LICENSE", output_dir)
+
+    base_params = build_base_pyproject_parameters(
+        package_env_config, SCRIPT_NAME, PEP440_VERSION
+    )
+
+    wheel_names = get_wheel_names(IPP_BuildWheelsSupport_DIR)
+    wheel_dependencies = get_wheel_dependencies(
+        SCRIPT_DIR, base_params["PYPROJECT_VERSION"], wheel_names
+    )
+
+    PYPROJECT_PY_PARAMETERS = {"itk": dict(base_params)}
+    PYPROJECT_PY_PARAMETERS.update(
+        update_wheel_pyproject_toml_parameters(
+            base_params,
+            package_env_config,
+            SCRIPT_NAME,
+            wheel_names,
+            wheel_dependencies,
+        )
+    )
+
+    if wheel_name not in PYPROJECT_PY_PARAMETERS.keys():
+        print(f"Unknown wheel name '{wheel_name}'")
         sys.exit(1)
 
     # Configure 'pyproject.toml'
-    output_file = os.path.join(args.output_dir, "pyproject.toml")
-    configure(template, PYPROJECT_PY_PARAMETERS[args.wheel_name], output_file)
+    output_file = os.path.join(output_dir, "pyproject.toml")
+    print(f"Generating: {output_file}")
+    template = os.path.join(SCRIPT_DIR, "pyproject.toml.in")
+    configure(template, PYPROJECT_PY_PARAMETERS[wheel_name], output_file)
 
-    # Configure or remove 'itk/__init__.py'
-    # init_py = os.path.join(args.output_dir, "itk", "__init__.py")
-    # if args.wheel_name in ["itk", "itk-core"]:
-    # with open(init_py, 'w') as file_:
-    # file_.write("# Stub required for package\n")
-    # else:
-    # if os.path.exists(init_py):
-    # os.remove(init_py)
+
+def write_itkVersion_py(filename: str | Path, itk_package_version: str):
+    itk_version_python_code = f"""
+VERSION: str = '{itk_package_version}'
+
+def get_versions() -> str:
+    \"\"\"Returns versions for the ITK Python package.
+
+    from itkVersion import get_versions
+
+    # Returns the ITK repository version
+    get_versions()['version']
+
+    # Returns the package version. Since GitHub Releases do not support the '+'
+    # character in file names, this does not contain the local version
+    # identifier in nightly builds, i.e.
+    #
+    #  '6.0.1.dev20251126'
+    #
+    # instead of
+    #
+    #  '6.0.1.dev20251126+139.g922f2d9'
+    get_versions()['package-version']
+    \"\"\"
+
+    versions = {{}}
+    versions['version'] = VERSION
+    versions['package-version'] = VERSION.split('+')[0]
+    return versions
+"""
+    with open(filename, "w") as wfid:
+        wfid.write(itk_version_python_code)
 
 
 if __name__ == "__main__":
