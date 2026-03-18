@@ -40,10 +40,7 @@ usage() {
 }
 
 CMAKE_OPTIONS=""
-PARSED_ARGS=$(getopt -a -n macpython-download-cache-and-build-module-wheels \
-  -o hc: --long help,cmake_options: -- "$@")
-eval set -- "$PARSED_ARGS"
-while :; do
+while [ $# -gt 0 ]; do
   case "$1" in
   -h | --help) usage ;;
   -c | --cmake_options)
@@ -54,7 +51,9 @@ while :; do
     shift
     break
     ;;
-  *) usage ;;
+  *)
+    break
+    ;;
   esac
 done
 
@@ -114,14 +113,18 @@ if [[ ! -f ${local_compress_tarball_name} ]]; then
 fi
 local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar
 unzstd --long=31 "${local_compress_tarball_name}" -o "${local_tarball_name}"
-PATH="$(dirname "$(brew list gnu-tar | grep gtar | grep "/bin/")"):$PATH"
-# Find tar implementation
-if tar --version 2>/dev/null | grep -q "GNU tar"; then
+# Find GNU tar (gtar from pixi or brew) for reliable extraction
+if command -v gtar >/dev/null 2>&1; then
+  TAR_CMD=gtar
+  TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
+elif tar --version 2>/dev/null | grep -q "GNU tar"; then
+  TAR_CMD=tar
   TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
 else
+  TAR_CMD=tar
   TAR_FLAGS=()
 fi
-tar xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
+"${TAR_CMD}" xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
 rm "${local_tarball_name}"
 
 # Optional: Update build scripts
