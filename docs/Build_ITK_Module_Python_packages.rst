@@ -198,6 +198,52 @@ For more control over build option, call ``build_wheels.py`` directly with
      --no-build-itk-tarball-cache
 
 
+.. _accelerated-builds:
+
+Accelerated Builds with libitk-wrapping (pixi-build)
+=====================================================
+
+When ITK is pre-installed in the conda/pixi environment via the
+``libitk-wrapping`` package, the build system automatically skips the
+expensive ITK C++ compilation (steps 01 and 02). This reduces remote
+module build times from ~1-2 hours to ~15 minutes.
+
+To use this workflow, first build and install the ``libitk-wrapping``
+package:
+
+.. code-block:: bash
+
+   cd packages/libitk-wrapping
+   pixi build
+
+Then build your module wheel — ITK will be detected automatically:
+
+.. code-block:: bash
+
+   pixi run -e linux-py311 python scripts/build_wheels.py \
+     --platform-env linux-py311 \
+     --module-source-dir /path/to/ITKMyModule \
+     --skip-itk-build \
+     --skip-itk-wheel-build \
+     --no-build-itk-tarball-cache
+
+The detection checks ``CONDA_PREFIX`` and ``PIXI_ENVIRONMENT_DIR`` for
+``lib/cmake/ITK-*/ITKConfig.cmake``. When found, the console will print::
+
+   Detected conda-installed ITK at <path> (via $CONDA_PREFIX)
+   Using conda-installed ITK; skipping superbuild and C++ build steps.
+
+To override the ITK source repository and tag for the ``libitk-wrapping``
+build (e.g., to test a feature branch):
+
+.. code-block:: bash
+
+   export ITK_GIT_URL="https://github.com/MyOrg/ITK.git"
+   export ITK_GIT_TAG="my-feature-branch"
+   cd packages/libitk-wrapping
+   pixi build
+
+
 Module Dependencies
 ===================
 

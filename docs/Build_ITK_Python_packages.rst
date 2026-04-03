@@ -132,6 +132,13 @@ Finished wheels are placed in ``<build-dir-root>/dist/``.
    ``--build-itk-tarball-cache`` to save the result as a reusable tarball
    and avoid rebuilding on subsequent runs.
 
+.. tip::
+   For even faster builds, install the ``libitk-wrapping`` conda package
+   (see ``packages/libitk-wrapping/``). When present in the pixi/conda
+   environment, the build system automatically detects it and skips the
+   ITK C++ compilation entirely. See
+   :ref:`Build ITK Module Python Packages <accelerated-builds>` for details.
+
 
 Key Options
 ===========
