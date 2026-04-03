@@ -205,6 +205,35 @@ class BuildPythonInstanceBase(ABC):
             "Python3_ROOT_DIR:PATH", f"{self.venv_info_dict['python_root_dir']}"
         )
 
+    def _detect_conda_itk(self) -> Path | None:
+        """Detect a pre-installed ITK from a conda/pixi environment.
+
+        Checks ``CONDA_PREFIX`` (or ``PIXI_ENVIRONMENT_DIR``) for an
+        installed ITK CMake config directory.  When found, the superbuild
+        and C++ build steps can be skipped entirely.
+
+        Returns
+        -------
+        Path or None
+            Path to the ITK CMake config directory, or *None* if not found.
+        """
+        for env_var in ("CONDA_PREFIX", "PIXI_ENVIRONMENT_DIR"):
+            prefix = os.environ.get(env_var, "")
+            if not prefix:
+                continue
+            # Search for lib/cmake/ITK-* (version may vary)
+            cmake_dir = Path(prefix) / "lib" / "cmake"
+            if cmake_dir.is_dir():
+                for candidate in sorted(cmake_dir.glob("ITK-*")):
+                    itk_config = candidate / "ITKConfig.cmake"
+                    if itk_config.is_file():
+                        print(
+                            f"Detected conda-installed ITK at {candidate} "
+                            f"(via ${env_var})"
+                        )
+                        return candidate
+        return None
+
     def run(self) -> None:
         """Run the full build flow for this Python instance."""
         # Use BuildManager to persist and resume build steps
@@ -212,6 +241,21 @@ class BuildPythonInstanceBase(ABC):
         # HACK
         if self.itk_module_deps:
             self._build_module_dependencies()
+
+        # Check for conda/pixi-provided ITK (libitk-wrapping package)
+        conda_itk_dir = self._detect_conda_itk()
+        if conda_itk_dir is not None:
+            # Point the build at the pre-installed ITK — skip compilation
+            self.cmake_itk_source_build_configurations.set(
+                "ITK_DIR:PATH", str(conda_itk_dir)
+            )
+            # Set ITK_BINARY_DIR so wheel build and cleanup paths still resolve
+            self.cmake_itk_source_build_configurations.set(
+                "ITK_BINARY_DIR:PATH", str(conda_itk_dir)
+            )
+            print(
+                "Using conda-installed ITK; skipping superbuild and C++ build steps."
+            )
 
         python_package_build_steps: OrderedDict[str, Callable] = OrderedDict(
             {
@@ -222,6 +266,21 @@ class BuildPythonInstanceBase(ABC):
                 "05_final_import_test": self.final_import_test,
             }
         )
+
+        if conda_itk_dir is not None:
+            # Skip both superbuild and C++ build when using conda ITK
+            python_package_build_steps = OrderedDict(
+                (
+                    (f"{k}_skipped", (lambda: None))
+                    if k
+                    in (
+                        "01_superbuild_support_components",
+                        "02_build_wrapped_itk_cplusplus",
+                    )
+                    else (k, v)
+                )
+                for k, v in python_package_build_steps.items()
+            )
 
         if self.skip_itk_build:
             # Skip these steps if we are in the CI environment
