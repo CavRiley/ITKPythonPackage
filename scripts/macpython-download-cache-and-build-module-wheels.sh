@@ -76,73 +76,95 @@ if [ ! -d "${DASHBOARD_BUILD_DIRECTORY}" ]; then
 fi
 cd "${DASHBOARD_BUILD_DIRECTORY}" || exit
 
-# NOTE: download phase will install pixi in the DASHBOARD_BUILD_DIRECTORY (which is separate from the pixi
-#       environment used by ITKPythonPackage).
-export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/.pixi
-if [ ! -f "${PIXI_HOME}/.pixi/bin/pixi" ]; then
-  # Install pixi
-  curl -fsSL https://pixi.sh/install.sh | sh
-  # These are the tools needed for cross platform downloads of the ITK build caches stored in https://github.com/InsightSoftwareConsortium/ITKPythonBuilds
-  pixi global install zstd
-  pixi global install aria2
-  pixi global install gnu-tar
-  pixi global install git
-  pixi global install rsync
-fi
-export PATH="${PIXI_HOME}/bin:$PATH"
+# -----------------------------------------------------------------------
+# Check for conda/pixi-provided ITK (libitk-wrapping package).
+# When available, skip the tarball download entirely.
 
-tarball_arch="-$(arch)"
-TARBALL_NAME="ITKPythonBuilds-macosx${tarball_arch}.tar"
-
-if [[ ! -f ${TARBALL_NAME}.zst ]]; then
-  echo "Local ITK cache tarball file not found..."
-  # Fetch ITKPythonBuilds archive containing ITK build artifacts
-  echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
-  if ! curl -L "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst" -O; then
-    echo "FAILED Download:"
-    echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
-    exit 1
+_conda_itk_dir=""
+for _prefix_var in CONDA_PREFIX PIXI_ENVIRONMENT_DIR; do
+  _prefix="${!_prefix_var:-}"
+  if [ -n "${_prefix}" ]; then
+    for _candidate in "${_prefix}"/lib/cmake/ITK-*; do
+      if [ -f "${_candidate}/ITKConfig.cmake" ]; then
+        _conda_itk_dir="${_candidate}"
+        echo "Detected conda-installed ITK at ${_conda_itk_dir} (via \$${_prefix_var})"
+        break 2
+      fi
+    done
   fi
-fi
+done
 
-if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
-  echo "ERROR: can not find required binary './${TARBALL_NAME}.zst'"
-  exit 255
-fi
-
-local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
-if [[ ! -f ${local_compress_tarball_name} ]]; then
-  aria2c -c --file-allocation=none -d "$(dirname "${local_compress_tarball_name}")" -o "$(basename "${local_compress_tarball_name}")" -s 10 -x 10 "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
-fi
-local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar
-unzstd --long=31 "${local_compress_tarball_name}" -o "${local_tarball_name}"
-# Find GNU tar (gtar from pixi or brew) for reliable extraction
-if command -v gtar >/dev/null 2>&1; then
-  TAR_CMD=gtar
-  TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
-elif tar --version 2>/dev/null | grep -q "GNU tar"; then
-  TAR_CMD=tar
-  TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
+if [ -n "${_conda_itk_dir}" ]; then
+  echo "Using conda-installed ITK; skipping tarball download."
 else
-  TAR_CMD=tar
-  TAR_FLAGS=()
-fi
-"${TAR_CMD}" xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
-rm "${local_tarball_name}"
-
-# Optional: Update build scripts
-if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
-  echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
-  local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
-  if [ ! -d "${local_clone_ipp}/.git" ]; then
-    git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
+  # NOTE: download phase will install pixi in the DASHBOARD_BUILD_DIRECTORY (which is separate from the pixi
+  #       environment used by ITKPythonPackage).
+  export PIXI_HOME=${DASHBOARD_BUILD_DIRECTORY}/.pixi
+  if [ ! -f "${PIXI_HOME}/.pixi/bin/pixi" ]; then
+    # Install pixi
+    curl -fsSL https://pixi.sh/install.sh | sh
+    # These are the tools needed for cross platform downloads of the ITK build caches stored in https://github.com/InsightSoftwareConsortium/ITKPythonBuilds
+    pixi global install zstd
+    pixi global install aria2
+    pixi global install gnu-tar
+    pixi global install git
+    pixi global install rsync
   fi
-  pushd "${local_clone_ipp}" || exit
-  git checkout "${ITKPYTHONPACKAGE_TAG}"
-  git reset "origin/${ITKPYTHONPACKAGE_TAG}" --hard
-  git status
-  popd || exit
-  rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
+  export PATH="${PIXI_HOME}/bin:$PATH"
+
+  tarball_arch="-$(arch)"
+  TARBALL_NAME="ITKPythonBuilds-macosx${tarball_arch}.tar"
+
+  if [[ ! -f ${TARBALL_NAME}.zst ]]; then
+    echo "Local ITK cache tarball file not found..."
+    # Fetch ITKPythonBuilds archive containing ITK build artifacts
+    echo "Fetching https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
+    if ! curl -L "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst" -O; then
+      echo "FAILED Download:"
+      echo "curl -L https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/${TARBALL_NAME}.zst -O"
+      exit 1
+    fi
+  fi
+
+  if [[ ! -f ./${TARBALL_NAME}.zst ]]; then
+    echo "ERROR: can not find required binary './${TARBALL_NAME}.zst'"
+    exit 255
+  fi
+
+  local_compress_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst
+  if [[ ! -f ${local_compress_tarball_name} ]]; then
+    aria2c -c --file-allocation=none -d "$(dirname "${local_compress_tarball_name}")" -o "$(basename "${local_compress_tarball_name}")" -s 10 -x 10 "https://github.com/InsightSoftwareConsortium/ITKPythonBuilds/releases/download/${ITK_PACKAGE_VERSION}/ITKPythonBuilds-macosx${tarball_arch}.tar.zst"
+  fi
+  local_tarball_name=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonBuilds-macosx${tarball_arch}.tar
+  unzstd --long=31 "${local_compress_tarball_name}" -o "${local_tarball_name}"
+  # Find GNU tar (gtar from pixi or brew) for reliable extraction
+  if command -v gtar >/dev/null 2>&1; then
+    TAR_CMD=gtar
+    TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
+  elif tar --version 2>/dev/null | grep -q "GNU tar"; then
+    TAR_CMD=tar
+    TAR_FLAGS=(--warning=no-unknown-keyword --checkpoint=10000 --checkpoint-action=dot)
+  else
+    TAR_CMD=tar
+    TAR_FLAGS=()
+  fi
+  "${TAR_CMD}" xf "${local_tarball_name}" "${TAR_FLAGS[@]}"
+  rm "${local_tarball_name}"
+
+  # Optional: Update build scripts
+  if [[ -n ${ITKPYTHONPACKAGE_TAG} ]]; then
+    echo "Updating build scripts to ${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage@${ITKPYTHONPACKAGE_TAG}"
+    local_clone_ipp=${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage_${ITKPYTHONPACKAGE_TAG}
+    if [ ! -d "${local_clone_ipp}/.git" ]; then
+      git clone "https://github.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage.git" "${local_clone_ipp}"
+    fi
+    pushd "${local_clone_ipp}" || exit
+    git checkout "${ITKPYTHONPACKAGE_TAG}"
+    git reset "origin/${ITKPYTHONPACKAGE_TAG}" --hard
+    git status
+    popd || exit
+    rsync -av "${local_clone_ipp}/" "${DASHBOARD_BUILD_DIRECTORY}/ITKPythonPackage/"
+  fi
 fi
 
 echo "Building module wheels"

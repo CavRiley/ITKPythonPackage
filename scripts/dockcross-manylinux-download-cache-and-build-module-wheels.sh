@@ -87,27 +87,52 @@ ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG:-InsightSoftwareConsortium}
 ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG:-main}
 
 # -----------------------------------------------------------------------
-# Download and extract cache
+# Check for conda/pixi-provided ITK (libitk-wrapping package).
+# When available, skip the tarball download entirely.
 
-echo "Fetching https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh"
-curl -L "https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh" -O
-chmod u+x dockcross-manylinux-download-cache.sh
-_download_cmd="ITK_GIT_TAG=${ITK_GIT_TAG} \
-    ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} \
-    ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
-    ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
-    MANYLINUX_VERSION=${MANYLINUX_VERSION} \
-    TARGET_ARCH=${TARGET_ARCH} \
-    bash -x \
-    ${download_script_dir}/dockcross-manylinux-download-cache.sh $1"
-echo "Running: ${_download_cmd}"
-eval "${_download_cmd}"
+_conda_itk_dir=""
+for _prefix_var in CONDA_PREFIX PIXI_ENVIRONMENT_DIR; do
+  _prefix="${!_prefix_var:-}"
+  if [ -n "${_prefix}" ]; then
+    for _candidate in "${_prefix}"/lib/cmake/ITK-*; do
+      if [ -f "${_candidate}/ITKConfig.cmake" ]; then
+        _conda_itk_dir="${_candidate}"
+        echo "Detected conda-installed ITK at ${_conda_itk_dir} (via \$${_prefix_var})"
+        break 2
+      fi
+    done
+  fi
+done
 
-#NOTE: in this scenario, untarred_ipp_dir is extracted from tarball
-#      during ${download_script_dir}/dockcross-manylinux-download-cache.sh
-untarred_ipp_dir=${download_script_dir}/ITKPythonPackage
+if [ -n "${_conda_itk_dir}" ]; then
+  echo "Using conda-installed ITK; skipping tarball download."
+  # Point to this repo's own scripts (already present on disk)
+  untarred_ipp_dir=${download_script_dir}
+  ITK_SOURCE_DIR=""
+else
+  # -----------------------------------------------------------------------
+  # Download and extract cache (legacy tarball path)
 
-ITK_SOURCE_DIR=${download_script_dir}/ITKPythonPackage-build/ITK
+  echo "Fetching https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh"
+  curl -L "https://raw.githubusercontent.com/${ITKPYTHONPACKAGE_ORG}/ITKPythonPackage/${ITKPYTHONPACKAGE_TAG}/scripts/dockcross-manylinux-download-cache.sh" -O
+  chmod u+x dockcross-manylinux-download-cache.sh
+  _download_cmd="ITK_GIT_TAG=${ITK_GIT_TAG} \
+      ITK_PACKAGE_VERSION=${ITK_PACKAGE_VERSION} \
+      ITKPYTHONPACKAGE_ORG=${ITKPYTHONPACKAGE_ORG} \
+      ITKPYTHONPACKAGE_TAG=${ITKPYTHONPACKAGE_TAG} \
+      MANYLINUX_VERSION=${MANYLINUX_VERSION} \
+      TARGET_ARCH=${TARGET_ARCH} \
+      bash -x \
+      ${download_script_dir}/dockcross-manylinux-download-cache.sh $1"
+  echo "Running: ${_download_cmd}"
+  eval "${_download_cmd}"
+
+  #NOTE: in this scenario, untarred_ipp_dir is extracted from tarball
+  #      during ${download_script_dir}/dockcross-manylinux-download-cache.sh
+  untarred_ipp_dir=${download_script_dir}/ITKPythonPackage
+
+  ITK_SOURCE_DIR=${download_script_dir}/ITKPythonPackage-build/ITK
+fi
 
 # -----------------------------------------------------------------------
 # Build module wheels

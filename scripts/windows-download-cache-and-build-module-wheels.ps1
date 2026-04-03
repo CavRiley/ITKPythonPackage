@@ -87,6 +87,31 @@ echo "ITK_PACKAGE_VERSION: $ITK_PACKAGE_VERSION"
 echo "ITK_GIT_TAG        : $ITK_GIT_TAG"
 echo "Platform env       : $platformEnv"
 
+# ---------------------------------------------------------------------------
+# Check for conda/pixi-provided ITK (libitk-wrapping package).
+# When available, skip the archive download entirely.
+# ---------------------------------------------------------------------------
+$condaItkDir = $null
+foreach ($prefixVar in @("CONDA_PREFIX", "PIXI_ENVIRONMENT_DIR")) {
+  $prefix = [System.Environment]::GetEnvironmentVariable($prefixVar)
+  if ($prefix -and (Test-Path "$prefix\lib\cmake")) {
+    foreach ($candidate in (Get-ChildItem "$prefix\lib\cmake" -Directory -Filter "ITK-*" -ErrorAction SilentlyContinue)) {
+      if (Test-Path "$($candidate.FullName)\ITKConfig.cmake") {
+        $condaItkDir = $candidate.FullName
+        echo "Detected conda-installed ITK at $condaItkDir (via `$$prefixVar)"
+        break
+      }
+    }
+    if ($condaItkDir) { break }
+  }
+}
+
+if ($condaItkDir) {
+  echo "Using conda-installed ITK; skipping archive download."
+  # Use local ITKPythonPackage scripts
+  $ippDir = $PSScriptRoot | Split-Path
+} else {
+
 # Install pixi and required global tools
 # NOTE: Python and Doxygen are provided by the pixi environment; no need to
 #       install them separately here.
@@ -195,9 +220,13 @@ if ($ITKPYTHONPACKAGE_TAG) {
   Remove-Item -Recurse -Force $ippTmpDir
 }
 
+} # end else (tarball download path)
+
 # Build the module wheel
 # Assemble paths used by build_wheels.py
-$ippDir        = "$DASHBOARD_BUILD_DIRECTORY\IPP"
+if (-not $ippDir) {
+  $ippDir = "$DASHBOARD_BUILD_DIRECTORY\IPP"
+}
 $buildScript   = "$ippDir\scripts\build_wheels.py"
 # build_wheels.py expects the cached ITK build at <build-dir-root>\build\ITK-windows-py3XX-...
 # Since the zip extracts directly into BDR (i.e. BDR\build\ITK-windows-py311-...), BDR is the root.
