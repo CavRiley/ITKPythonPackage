@@ -1,0 +1,73 @@
+{% set version = "6.0.0" %}
+{% set itk_tag = "v" + version %}
+
+package:
+  name: libitk-wrapping
+  version: {{ version }}
+
+source:
+  url: https://github.com/InsightSoftwareConsortium/ITK/archive/{{ itk_tag }}.tar.gz
+  # sha256: UPDATE_WITH_ACTUAL_HASH
+
+build:
+  number: 0
+  skip: true  # [win and vc<14]
+
+requirements:
+  build:
+    - cmake >=3.26
+    - ninja
+    - {{ compiler('c') }}
+    - {{ stdlib("c") }}
+    - {{ compiler('cxx') }}
+  host:
+    - python
+    - swig >=4.1
+    - castxml
+    - expat                     # [not win]
+    - hdf5
+    - libjpeg-turbo
+    - libtiff
+    - libpng                    # [not win]
+    - eigen
+    - zlib                      # [not win]
+    - fftw
+    - tbb-devel
+    - doxygen
+  run:
+    - python
+    - tbb
+    - hdf5
+    - fftw
+    - libjpeg-turbo
+    - libtiff
+    - libpng                    # [not win]
+    - expat                     # [not win]
+    - zlib                      # [not win]
+
+test:
+  commands:
+    # Verify CMake config is installed and discoverable
+    - test -d $PREFIX/lib/cmake/ITK*                                   # [not win]
+    - if not exist %LIBRARY_LIB%\\cmake\\ITK* exit 1                   # [win]
+    # Verify Python wrapping modules are installed
+    - test -f $PREFIX/lib/python*/site-packages/itk/__init__.py        # [not win]
+    # Verify wrapping metadata is installed
+    - test -d $PREFIX/lib/cmake/ITK*/WrapITK/Typedefs                  # [not win]
+
+about:
+  home: https://itk.org
+  license: Apache-2.0
+  license_file:
+    - LICENSE
+    - NOTICE
+  summary: >
+    ITK C++ libraries with Python wrapping artifacts for building
+    ITK Python wheels and remote module packages.
+  dev_url: https://github.com/InsightSoftwareConsortium/ITK
+
+extra:
+  recipe-maintainers:
+    - hjmjohnson
+    - thewtex
+    - blowekamp
