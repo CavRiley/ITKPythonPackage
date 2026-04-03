@@ -1,0 +1,56 @@
+package:
+  name: libitk-wrapping
+  version: "6.99.0"
+
+source:
+  git: ${{ env.get("ITK_GIT_URL", "https://github.com/BRAINSia/ITK.git") }}
+  tag: ${{ env.get("ITK_GIT_TAG", "itk-conda-pythonpackage-support") }}
+
+build:
+  number: 0
+  script:
+    - if: unix
+      then: bash ${RECIPE_DIR}/build-libitk-wrapping.sh
+    - if: win
+      then: cmd /c ${RECIPE_DIR}/build-libitk-wrapping.bat
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake >=3.26
+    - ninja
+  host:
+    - python
+    - swig >=4.1
+    - castxml
+    - expat
+    - hdf5
+    - libjpeg-turbo
+    - libtiff
+    - libpng
+    - eigen
+    - zlib
+    - fftw
+    - tbb-devel
+    - doxygen
+  run:
+    - python
+    - tbb
+    - hdf5
+    - fftw
+    - libjpeg-turbo
+    - libtiff
+    - libpng
+    - expat
+    - zlib
+
+about:
+  home: https://itk.org
+  license: Apache-2.0
+  license_file: LICENSE
+  summary: >
+    ITK C++ libraries with Python wrapping artifacts (SWIG interfaces,
+    CastXML outputs, compiled Python modules). Used as a build dependency
+    for ITK Python wheel generation and remote module packaging.
+  dev_url: https://github.com/InsightSoftwareConsortium/ITK
