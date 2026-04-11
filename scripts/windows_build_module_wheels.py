@@ -52,6 +52,22 @@ def build_wheels(py_envs=DEFAULT_PY_ENVS, cleanup=True, cmake_options=[]):
 
         with push_env(PATH="%s%s%s" % (path, os.pathsep, os.environ["PATH"])):
             # Install dependencies
+            #
+            # Bootstrap pip from CPython's bundled ensurepip wheel BEFORE
+            # invoking the system pip, to sidestep a chicken-and-egg failure
+            # on Python 3.10+ runners.  scikit-ci-addons' install-python.ps1
+            # downloads get-pip.py from a pinned GitHub gist (jcfr commit
+            # 8478d43e), which installs a pip old enough to vendor an
+            # html5lib that still does `from collections import Mapping`
+            # (removed in Python 3.10).  Loading that pip to upgrade itself
+            # raises ImportError before any package operation can run.
+            # CPython's ensurepip module installs the pip wheel that ships
+            # with the interpreter (>= 21.x for Python 3.10), which has a
+            # working html5lib >= 1.1; the subsequent `pip install pip
+            # --upgrade` then succeeds normally.
+            check_call(
+                [python_executable, "-m", "ensurepip", "--upgrade", "--default-pip"]
+            )
             check_call([python_executable, "-m", "pip", "install", "pip", "--upgrade"])
             requirements_file = os.path.join(ROOT_DIR, "requirements-dev.txt")
             if os.path.exists(requirements_file):
