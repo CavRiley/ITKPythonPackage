@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: local-prepare-commit-msg
+        name: 'local prepare-commit-msg'
+        entry: 'Utilities/Hooks/prepare-commit-msg'
+        language: system
+        stages: [prepare-commit-msg]
+      - id: kw-commit-msg
+        name: 'kw commit-msg'
+        entry: 'python3 Utilities/Hooks/kw-commit-msg.py'
+        language: system
+        stages: [commit-msg]
