@@ -1,12 +1,20 @@
 # PEP 817 wheel variants experiment
 
-A self-contained sandbox for evaluating
+Two experiment paths for evaluating
 [PEP 817 — Python Wheel Distribution Format for Variants](https://peps.python.org/pep-0817/)
-against ITKPythonPackage's wheels. Owned by the
+against ITKPythonPackage's wheels, on the
 [`experiment/wheel-variants`](https://github.com/CavRiley/ITKPythonPackage/tree/experiment/wheel-variants)
-branch on `cav` (the user's fork). Nothing under this directory is touched
-by the production build path; nothing outside this directory is touched by
-this experiment.
+branch on `cav`:
+
+1. **Native build (production path, primary deliverable)** — the real ITK
+   build emits PEP-817-shaped wheels directly when invoked through the new
+   `variant-build` pixi feature in the **root** `pixi.toml` and the new
+   `--wheel-variant` / `--wheel-variant-label` / `--null-variant` flags on
+   `scripts/build_wheels.py`. Opt-in only; production envs are unaffected.
+2. **Sandbox demonstrators (this directory)** — a `pilot/` pybind11 module
+   for fast end-to-end iteration, plus a `mock/` post-process tool kept as a
+   reference for the format-shape claims. Useful for thesis writeups and
+   format validation; **not** the production path.
 
 ## Why
 
@@ -15,19 +23,11 @@ either separate package names (`itk-numerics`, `itk-meta`) or separate CI
 matrices (TBB on/off per platform, conda-cache vs tarball-cache, manylinux
 ABI tier, future GPU support). PEP 817 proposes a single distribution
 publishing per-variant wheels, distinguished by a `variant.json` sidecar in
-the dist-info plus a label suffix on the wheel filename. This experiment
-evaluates whether that format works for ITK in two ways:
+the dist-info plus a label suffix on the wheel filename.
 
-1. **Pilot** (`pilot/`) — build a tiny pybind11-based demonstrator wheel via
-   the variants-enabled fork of scikit-build-core, end-to-end. Proves the
-   build backend can produce a PEP-817-shaped wheel.
-2. **Mock** (`mock/`) — take a real ITK wheel from the production build and
-   reshape it into PEP 817 form using `wheelnext/variant-repack`. Proves
-   ITK's existing wheel artifacts are format-compatible.
-
-The chosen variant axis is **TBB on/off**, expressed as the property
-`itk :: threading :: tbb` with label `tbbon` (vs a `null-variant` fallback
-wheel for clients that do not understand variants).
+The chosen variant axis for this experiment is **TBB on/off**, expressed as
+the property `itk :: threading :: tbb` with label `tbbon` (vs a
+`null-variant` fallback wheel for clients that do not understand variants).
 
 ## Toolchain
 
@@ -71,19 +71,47 @@ experiments/wheel-variants/
     └── findings.md           # thesis-ready summary
 ```
 
-## Running
+## Running — production path (real ITK build)
+
+From the **repo root**, using the `variant-build` pixi feature added to the
+root `pixi.toml`:
+
+```sh
+# TBB-on variant
+pixi run -e variant-macosx-py311 build-itk-wheels \
+    --wheel-variant 'itk::threading::tbb' \
+    --wheel-variant-label tbbon
+
+# Null-variant fallback (PEP 817 publishers should ship one alongside)
+pixi run -e variant-macosx-py311 build-itk-wheels --null-variant
+
+# Or via env vars (parity with ITK_PACKAGE_VERSION style):
+ITKPYTHONPACKAGE_WHEEL_VARIANT='itk::threading::tbb' \
+ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL=tbbon \
+    pixi run -e variant-macosx-py311 build-itk-wheels
+```
+
+Available variant envs in the root `pixi.toml`:
+`variant-macosx-py311`, `variant-linux-py311`, `variant-manylinux228-py311`,
+`variant-windows-py311`. Default production envs (`manylinux228-py311`,
+`macosx-py311`, ...) are unaffected — they continue to use the stock
+scikit-build-core pin and never see variant config-settings.
+
+ITK builds are slow (1–2 hours) — the pilot below is the fast iteration loop.
+
+## Running — sandbox demonstrators
 
 ```sh
 cd experiments/wheel-variants
-pixi install                         # set up sandbox env (pulls forks)
-pixi run -- bash pilot/build_pilot.sh
-ls pilot/dist/                       # expect two variant-tagged wheels
-pixi run python pilot/inspect_wheel.py pilot/dist/*.whl
-
-# Phase 2 (after dropping a real ITK wheel into mock/fixtures/):
-pixi run -- bash mock/repack_itk_wheel.sh
-pixi run python mock/validate_variant_wheel.py mock/fixtures/*-tbbon.whl
+pixi install                         # local sandbox env (separate from root)
+pixi run build-pilot                 # ~30s, builds two variant-tagged pilot wheels
+pixi run inspect-pilot               # dump dist-info/variant.json + RECORD entries
+pixi run validate-pilot              # cross-check format with our validator
 ```
+
+The `mock/` directory contains the post-process repack tool used in earlier
+phases. Retained as a reference; not the production path. See
+[`docs/findings.md`](docs/findings.md) for the design pivot rationale.
 
 ## Status
 

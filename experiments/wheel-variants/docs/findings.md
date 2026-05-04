@@ -161,7 +161,65 @@ Other variant axes the project has but doesn't currently expose:
    their own repack — like this experiment did — until the wheelnext
    stack stabilizes.
 
-## Recommendation
+## Pivot to native-build (production path) — 2026-05-04
+
+The original conclusion below recommended *not* wiring variants into
+production yet, treating the experiment as reference-only. The user
+chose to move forward with a native-build integration anyway, on the
+strength of the format-compatibility result. The production-path wiring
+is now committed to this branch and works end-to-end via:
+
+```sh
+pixi run -e variant-macosx-py311 build-itk-wheels \
+    --wheel-variant 'itk::threading::tbb' --wheel-variant-label tbbon
+```
+
+(or the `ITKPYTHONPACKAGE_WHEEL_VARIANT[_LABEL]` /
+`ITKPYTHONPACKAGE_NULL_VARIANT` env vars).
+
+### What the production wiring adds
+
+- **`pixi.toml`:** new `[feature.variant-build]` (scikit-build-core fork
+  + variantlib via pypi-deps) and `[feature.variant-python-dev-pkgs]`
+  (mirror of `python-dev-pkgs` minus the conda `scikit-build-core` pin
+  — pixi feature merging is intersection so the upper bound `<0.12.0`
+  would otherwise prevent the `0.12.3.dev` fork from resolving). Four
+  new environments: `variant-{macosx,linux,manylinux228,windows}-py311`.
+- **`scripts/build_wheels.py`:** three new CLI flags
+  (`--wheel-variant`, repeatable; `--wheel-variant-label`;
+  `--null-variant`). Cross-flag validation + env-var defaults.
+- **`scripts/build_python_instance_base.py`:** a small
+  `_variant_config_settings` helper on `BuildPythonInstanceBase` that
+  emits the right `--config-setting=variant-*` list (or `[]` for the
+  production-default case). Spliced into both `python -m build`
+  invocations (`build_external_module_wheel` and
+  `build_itk_python_wheels`) just before `echo_check_call`.
+
+### Properties preserved by the production wiring
+
+- **Opt-in only.** Default-off via the flags/env vars. Production envs
+  (`manylinux228-py311`, `macosx-py311`, `windows-py311`) continue to
+  emit identical non-variant wheels.
+- **No post-processing.** Wheels emerge with the label suffix and
+  `variant.json` sidecar directly from `python -m build`, not via
+  repack. ITK's binary `.so`/`.dylib`/`.pyd` payloads are byte-identical
+  to a non-variant build of the same source.
+- **Validation up front.** Property regex (`namespace::feature::value`,
+  lowercase + `_`/`.`) and label regex (`[0-9a-z._]{1,16}`) are both
+  enforced before the build backend sees them, so a typo fails fast
+  with a clean error rather than mid-build.
+
+### What does NOT change
+
+The mock/repack path in `mock/` is retained as a format-validation
+reference but is no longer the production approach. The `wheelnext/variant-repack@master`
+breakage (importing `VARIANT_LABEL_LENGTH` from `variantlib.constants`
+where no tagged release exposes it) is documented but not blocking
+since the production path doesn't depend on it.
+
+---
+
+## Original recommendation (pre-pivot)
 
 For ITKPythonPackage's production build:
 
