@@ -382,6 +382,53 @@ def build_wheels_main() -> None:
          """,
     )
 
+    # ----------------------------------------------------------------------
+    # PEP 817 wheel variants (opt-in). The flags below are NO-OPs unless the
+    # build is invoked through one of the variant-* pixi envs that supplies
+    # the variants-enabled scikit-build-core fork (see [feature.variant-build]
+    # in the root pixi.toml). Production envs (manylinux228-py311, etc.) do
+    # not install the fork and will reject the variant config-settings, so
+    # the new env var ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL or its CLI
+    # equivalent must be explicitly set to activate them.
+    parser.add_argument(
+        "--wheel-variant",
+        type=str,
+        action="append",
+        default=None,
+        dest="wheel_variants",
+        help="""
+         - PEP 817 variant property as 'namespace::feature::value'. Repeatable.
+           Example: --wheel-variant 'itk::threading::tbb'.
+           Env: ITKPYTHONPACKAGE_WHEEL_VARIANT (';'-separated for multiple).
+           Requires --wheel-variant-label and a variant-* pixi env.
+           Mutually exclusive with --null-variant.
+        """,
+    )
+    parser.add_argument(
+        "--wheel-variant-label",
+        type=str,
+        default=os.environ.get("ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL"),
+        help="""
+         - PEP 817 label suffix on the wheel filename. Must match
+           [0-9a-z._]{1,16} (e.g. 'tbbon'). Required when --wheel-variant
+           is set. Env: ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL.
+        """,
+    )
+    parser.add_argument(
+        "--null-variant",
+        action="store_true",
+        default=os.environ.get("ITKPYTHONPACKAGE_NULL_VARIANT", "0").lower()
+        in ("1", "true", "yes", "on"),
+        dest="null_variant",
+        help="""
+         - Emit the null-variant fallback wheel (label='null', no properties).
+           Per PEP 817, publishers should ship one alongside their labeled
+           variants for consumers that don't understand variants.
+           Mutually exclusive with --wheel-variant / --wheel-variant-label.
+           Env: ITKPYTHONPACKAGE_NULL_VARIANT.
+        """,
+    )
+
     args = parser.parse_args()
 
     # Historical dist_dir name for compatibility with ITKRemoteModuleBuildTestPackageAction
@@ -482,6 +529,30 @@ def build_wheels_main() -> None:
     package_env_config["ITK_GIT_TAG"] = args.itk_git_tag
     package_env_config["ITK_SOURCE_DIR"] = args.itk_source_dir
     package_env_config["ITK_PACKAGE_VERSION"] = args.itk_package_version
+
+    # Resolve PEP 817 variant settings: CLI flags take precedence; otherwise
+    # fall back to env vars. Multiple variant properties are ';'-separated in
+    # the env-var form to match the rest of this repo's idioms (ITK_MODULE_PREQ
+    # uses the same separator). Cross-flag validation lives here so the build
+    # backend never sees an inconsistent state.
+    wheel_variants: list[str] = list(args.wheel_variants or [])
+    if not wheel_variants:
+        env_variants = os.environ.get("ITKPYTHONPACKAGE_WHEEL_VARIANT", "")
+        wheel_variants = [s for s in env_variants.split(";") if s.strip()]
+    if wheel_variants and args.null_variant:
+        parser.error(
+            "--wheel-variant and --null-variant are mutually exclusive"
+            " (PEP 817: a null-variant carries no properties)."
+        )
+    if wheel_variants and not args.wheel_variant_label:
+        parser.error(
+            "--wheel-variant requires --wheel-variant-label"
+            " (or ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL)."
+        )
+    package_env_config["WHEEL_VARIANTS"] = wheel_variants
+    package_env_config["WHEEL_VARIANT_LABEL"] = args.wheel_variant_label or ""
+    package_env_config["WHEEL_NULL_VARIANT"] = args.null_variant
+
     if os_name == "darwin":
         package_env_config["MACOSX_DEPLOYMENT_TARGET"] = args.macosx_deployment_target
     else:

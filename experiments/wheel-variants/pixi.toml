@@ -11,11 +11,9 @@ python = ">=3.11,<3.13"
 cmake = ">=3.26,<4"
 ninja = ">=1.11"
 pip = "*"
-# wheelnext deps at experiment time pin some core packaging tooling tightly
-# (variantlib: packaging>=25.0,<26.0; variant-repack: wheel>=0.46.2,<0.47).
-# Pin them in the conda layer so the PyPI solve can satisfy both.
+# variantlib pins packaging>=25.0,<26.0; pin in the conda layer so the
+# PyPI solve can satisfy that bound.
 packaging = ">=25.0,<26.0"
-wheel = ">=0.46.2,<0.47"
 # Inspection / validation is done via inspect_wheel.py and
 # validate_variant_wheel.py (Python stdlib zipfile + json), so no shell
 # tools like `unzip` or `jq` are required (and they aren't on conda-forge
@@ -27,10 +25,9 @@ wheel = ">=0.46.2,<0.47"
 scikit-build-core = { git = "https://github.com/henryiii/scikit-build-core.git", branch = "henryiii/feat/variants" }
 
 # Reference variantlib implementation (variant.json synthesis + parsing).
+# Used both at build time (the fork auto-injects variantlib as a build req
+# when variants are active) and at validation time (mock/validate_variant_wheel.py).
 variantlib = { git = "https://github.com/wheelnext/variantlib.git" }
-
-# Phase-2 tool: post-process a built wheel into a PEP-817-shaped variant wheel.
-variant-repack = { git = "https://github.com/wheelnext/variant-repack.git" }
 
 # Pilot project's only real build dep.
 pybind11 = "*"
@@ -41,5 +38,8 @@ build = "*"
 [tasks]
 build-pilot = "bash pilot/build_pilot.sh"
 inspect-pilot = "python pilot/inspect_wheel.py pilot/dist"
-repack-itk = "bash mock/repack_itk_wheel.sh"
-validate-itk = "python mock/validate_variant_wheel.py mock/fixtures"
+# mock/ is retained as a reference (proves the post-process path also works)
+# but the production approach is now to emit variant wheels natively from the
+# real ITK build via the new variant-build pixi feature in the root pixi.toml.
+# See docs/findings.md for the design pivot.
+validate-pilot = "python mock/validate_variant_wheel.py pilot/dist"

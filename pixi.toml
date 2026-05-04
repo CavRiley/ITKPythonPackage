@@ -136,6 +136,56 @@ python = ">=3.11,<3.12"
 #python = ">=3.14,<3.15"
 
 ########################################
+# PEP 817 wheel variants experiment (opt-in)
+########################################
+# Activates the variants-enabled fork of scikit-build-core (PR
+# scikit-build/scikit-build-core#1284) plus wheelnext/variantlib so that
+# `python -m build` emits per-variant wheels when the variant config-settings
+# are set. Drive via the build_wheels.py CLI flags --wheel-variant /
+# --wheel-variant-label / --null-variant or their env-var equivalents.
+#
+# Activation:
+#   pixi run -e variant-macosx-py311 build-itk-wheels \
+#       --wheel-variant 'itk::threading::tbb' --wheel-variant-label tbbon
+#
+# Status: opt-in only. The default production envs (manylinux228-py311,
+# macosx-py311, windows-py311, ...) are unaffected — they continue to use the
+# stock scikit-build-core pin from python-dev-pkgs and never see variant
+# config-settings. See experiments/wheel-variants/docs/findings.md for design
+# notes and the upstream-PR risk inventory.
+[feature.variant-build]
+
+[feature.variant-build.pypi-dependencies]
+# scikit-build-core fork backing PR #1284 (filename label suffix +
+# variant.json sidecar). wheelnext/scikit-build-core@main is stale and its
+# variant-hash-build-tag branch encodes a different design — fall back to
+# henryiii's branch which tracks the live PR.
+scikit-build-core = { git = "https://github.com/henryiii/scikit-build-core.git", branch = "henryiii/feat/variants" }
+# Reference variantlib implementation; the fork auto-injects this as a build
+# requirement when variants are active.
+variantlib = { git = "https://github.com/wheelnext/variantlib.git" }
+
+# Mirror of python-dev-pkgs WITHOUT the scikit-build-core conda pin
+# (>=0.11.6,<0.12.0). Pixi feature merging is intersection, so the stock
+# pin would prevent the variants fork (0.12.3.dev*) from resolving alongside.
+# Variant envs use this instead of python-dev-pkgs.
+[feature.variant-python-dev-pkgs]
+[feature.variant-python-dev-pkgs.dependencies]
+numpy = ">=1.26"
+packaging = ">=25.0,<26"
+pathspec = "*"
+pyproject-metadata = "*"
+# scikit-build-core deliberately omitted — supplied by feature.variant-build
+# from the henryiii git fork.
+setuptools_scm = ">=9.2.0"
+setuptools = ">=61"
+tomli = "*"
+pip = "*"
+
+[feature.variant-python-dev-pkgs.pypi-dependencies]
+build = "*"
+
+########################################
 # Publishing feature (no compilers needed)
 ########################################
 [feature.publish]
@@ -181,6 +231,40 @@ macosx-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 # Windows build env
 windows-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "windows-build"]
 windows-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "windows-build"]
+
+# Wheel variants envs (parallel to the production envs, but activate the
+# variants-enabled scikit-build-core fork via [feature.variant-build]).
+# Only py311 for now — variants are opt-in and only one Python ABI is needed
+# to validate the format. Add more pyXYZ pairs as the feature stabilizes.
+variant-macosx-py311 = [
+  "py311",
+  "build-dev-tools",
+  "variant-python-dev-pkgs",
+  "macosx-build",
+  "variant-build",
+]
+variant-linux-py311 = [
+  "py311",
+  "linux-build",
+  "build-dev-tools",
+  "variant-python-dev-pkgs",
+  "variant-build",
+]
+variant-manylinux228-py311 = [
+  "py311",
+  "manylinux-common-build",
+  "manylinux228-build",
+  "build-dev-tools",
+  "variant-python-dev-pkgs",
+  "variant-build",
+]
+variant-windows-py311 = [
+  "py311",
+  "build-dev-tools",
+  "variant-python-dev-pkgs",
+  "windows-build",
+  "variant-build",
+]
 
 [dependencies]
 # pixi-pycharm and conda are only needed to support development in pycharm

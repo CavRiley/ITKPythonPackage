@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -253,9 +254,7 @@ class BuildPythonInstanceBase(ABC):
             self.cmake_itk_source_build_configurations.set(
                 "ITK_BINARY_DIR:PATH", str(conda_itk_dir)
             )
-            print(
-                "Using conda-installed ITK; skipping superbuild and C++ build steps."
-            )
+            print("Using conda-installed ITK; skipping superbuild and C++ build steps.")
 
         python_package_build_steps: OrderedDict[str, Callable] = OrderedDict(
             {
@@ -452,6 +451,59 @@ class BuildPythonInstanceBase(ABC):
             ]
         )
         print("Documentation tests passed.")
+
+    # PEP 817 variant label grammar: lowercase alphanumerics + . + _ , 1–16 chars.
+    _VARIANT_LABEL_RE = re.compile(r"^[0-9a-z._]{1,16}$")
+    # Variant property syntax used by the scikit-build-core variants fork:
+    # 'namespace::feature::value', each component lowercase with limited
+    # punctuation. Conservative — the upstream regex may relax over time.
+    _VARIANT_PROPERTY_RE = re.compile(r"^[0-9a-z_]+::[0-9a-z_]+::[0-9a-z._]+$")
+
+    def _variant_config_settings(self) -> list[str]:
+        """Return the ``--config-setting=variant-*`` flags for ``python -m build``.
+
+        Reads from :attr:`package_env_config`, populated by ``build_wheels.py``
+        from ``--wheel-variant`` / ``--wheel-variant-label`` / ``--null-variant``
+        (or their ``ITKPYTHONPACKAGE_WHEEL_VARIANT*`` env-var equivalents).
+
+        Returns an **empty list** when variants are not requested, so production
+        envs that don't install the variants-enabled scikit-build-core fork
+        never see flags they would reject. The flags only take effect inside a
+        ``variant-*`` pixi env (see ``[feature.variant-build]`` in pixi.toml).
+        """
+        variants = list(self.package_env_config.get("WHEEL_VARIANTS") or [])
+        label = self.package_env_config.get("WHEEL_VARIANT_LABEL") or ""
+        null_variant = bool(self.package_env_config.get("WHEEL_NULL_VARIANT", False))
+
+        if not variants and not null_variant:
+            return []
+
+        if null_variant:
+            # The fork rejects null-variant + variant-label as mutually
+            # exclusive; the 'null' label is implied.
+            return [
+                "--config-setting=experimental=true",
+                "--config-setting=null-variant=true",
+            ]
+
+        if not self._VARIANT_LABEL_RE.match(label):
+            raise ValueError(
+                f"variant label {label!r} violates PEP 817 grammar [0-9a-z._]{{1,16}}"
+            )
+        for prop in variants:
+            if not self._VARIANT_PROPERTY_RE.match(prop):
+                raise ValueError(
+                    f"variant property {prop!r} must match 'namespace::feature::value'"
+                    " (lowercase alphanumerics + '_'; values may also use '.')"
+                )
+
+        settings = [
+            "--config-setting=experimental=true",
+            f"--config-setting=variant-label={label}",
+        ]
+        # Each property is its own --config-setting; the fork accumulates them.
+        settings.extend(f"--config-setting=variant={prop}" for prop in variants)
+        return settings
 
     def _pip_uninstall_itk_wildcard(self, python_executable: str | Path):
         """Uninstall all installed packages whose name starts with 'itk'.
@@ -787,9 +839,7 @@ class BuildPythonInstanceBase(ABC):
             pyproject_data = tomllib.load(f)
 
         # --- Strategy 3: module declares dynamic dependencies -----------------
-        dynamic_fields = (
-            pyproject_data.get("project", {}).get("dynamic", [])
-        )
+        dynamic_fields = pyproject_data.get("project", {}).get("dynamic", [])
         if "dependencies" in dynamic_fields:
             # The module has opted into dynamic dependency resolution.
             # Set ITK_PACKAGE_VERSION in the environment so the
@@ -798,7 +848,7 @@ class BuildPythonInstanceBase(ABC):
             os.environ["ITK_PACKAGE_VERSION"] = itk_version
             print(
                 f"Strategy 3: {pyproject_path.name} declares "
-                f"dynamic=[\"dependencies\"]; set ITK_PACKAGE_VERSION="
+                f'dynamic=["dependencies"]; set ITK_PACKAGE_VERSION='
                 f"{itk_version} for metadata provider"
             )
             return False  # no file modification needed
@@ -819,9 +869,7 @@ class BuildPythonInstanceBase(ABC):
             "itk-segmentation",
         )
         _base_pkg_alt = "|".join(re.escape(p) for p in _ITK_BASE_PACKAGES)
-        pattern = re.compile(
-            rf'"({_base_pkg_alt})\s*==\s*[\d]+\.[\d]+\.\*"'
-        )
+        pattern = re.compile(rf'"({_base_pkg_alt})\s*==\s*[\d]+\.[\d]+\.\*"')
 
         # Warn about pinned remote-module cross-deps that may also need
         # attention but should not be auto-rewritten.
@@ -849,6 +897,7 @@ class BuildPythonInstanceBase(ABC):
             min_floor = itk_version
 
         changed = False
+
         def _replace(m: re.Match) -> str:
             nonlocal changed
             changed = True
@@ -881,9 +930,7 @@ class BuildPythonInstanceBase(ABC):
             itk_ver = self.package_env_config.get("ITK_PACKAGE_VERSION", "")
             if itk_ver:
                 shutil.copy2(module_pyproject, pyproject_orig)
-                deps_rewritten = self._update_module_itk_deps(
-                    module_pyproject, itk_ver
-                )
+                deps_rewritten = self._update_module_itk_deps(module_pyproject, itk_ver)
 
         # Ensure venv tools are first in PATH
         py_exe = str(self.package_env_config["PYTHON_EXECUTABLE"])  # Python3_EXECUTABLE
@@ -978,6 +1025,10 @@ class BuildPythonInstanceBase(ABC):
         if wheel_py_api:
             cmd += [f"--config-setting=wheel.py-api={wheel_py_api}"]
 
+        # PEP 817 variant config-settings (no-op unless --wheel-variant or
+        # --null-variant was set on build_wheels.py / its env-var equivalent).
+        cmd += self._variant_config_settings()
+
         # Module source directory to build
         cmd += [self.module_source_dir]
 
@@ -1054,6 +1105,8 @@ class BuildPythonInstanceBase(ABC):
                 scikitbuild_cmdline_args.update(self.cmake_cmdline_definitions.items())
                 # Append all cmake.define entries
             cmd += scikitbuild_cmdline_args.getPythonBuildCommandLineArguments()
+            # PEP 817 variant config-settings (no-op unless variants opted in).
+            cmd += self._variant_config_settings()
             # The location of the generated pyproject.toml file
             cmd += [wheel_configbuild_dir_root]
             self.echo_check_call(cmd)
