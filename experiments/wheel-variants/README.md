@@ -77,19 +77,26 @@ From the **repo root**, using the `variant-build` pixi feature added to the
 root `pixi.toml`:
 
 ```sh
-# TBB-on variant
-pixi run -e variant-macosx-py311 build-itk-wheels \
+# TBB-on variant. The `--` separator is required so pixi forwards the
+# script's flags instead of trying to parse them as its own.
+pixi run -e variant-macosx-py311 build-itk-wheels -- \
     --wheel-variant 'itk::threading::tbb' \
     --wheel-variant-label tbbon
 
 # Null-variant fallback (PEP 817 publishers should ship one alongside)
-pixi run -e variant-macosx-py311 build-itk-wheels --null-variant
+pixi run -e variant-macosx-py311 build-itk-wheels -- --null-variant
 
-# Or via env vars (parity with ITK_PACKAGE_VERSION style):
+# Or via env vars (parity with ITK_PACKAGE_VERSION style — no `--` needed
+# because no extra args are passed to the script):
 ITKPYTHONPACKAGE_WHEEL_VARIANT='itk::threading::tbb' \
 ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL=tbbon \
     pixi run -e variant-macosx-py311 build-itk-wheels
 ```
+
+> **Pixi gotcha:** `pixi run TASK --some-flag` silently drops `--some-flag`
+> when pixi can't determine whether it's a pixi flag or a task flag. Always
+> use `pixi run TASK -- --some-flag` for any task that takes flags pixi
+> doesn't know about.
 
 Available variant envs in the root `pixi.toml`:
 `variant-macosx-py311`, `variant-linux-py311`, `variant-manylinux228-py311`,

@@ -736,12 +736,15 @@ def get_default_platform_build(default_python_version: str = "py311") -> str:
             "manylinux228": "manylinux_2_28",
             "manylinux234": "manylinux_2_34",
         }
-        platform_prefix: str = from_pixi.split("-")[0]
-        python_version: str = from_pixi.split("-")[1]
-        platform_prefix = manylinux_pixi_to_pattern_renaming.get(
-            platform_prefix, platform_prefix
-        )
-        return f"{platform_prefix}-{python_version}"
+        # Preserve every segment so multi-hyphen env names round-trip
+        # correctly. The previous two-line `split[0] / split[1]` form worked
+        # for 2-segment production envs (manylinux228-py311, macosx-py311) but
+        # truncated 3-segment names like 'variant-macosx-py311' to
+        # 'variant-macosx', causing downstream `pixi run -e <truncated>` to
+        # invoke a non-existent env.
+        parts: list[str] = from_pixi.split("-")
+        parts[0] = manylinux_pixi_to_pattern_renaming.get(parts[0], parts[0])
+        return "-".join(parts)
     else:
         if sys.platform == "darwin":
             return f"macosx-{default_python_version}"
