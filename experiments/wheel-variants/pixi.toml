@@ -1,0 +1,38 @@
+[workspace]
+name = "itk-wheel-variants-experiment"
+version = "0.1.0"
+description = "Sandbox for evaluating PEP 817 wheel variants against ITKPythonPackage's wheels"
+authors = ["Cavan Riley <cavan-riley@uiowa.edu>"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = ">=3.11,<3.13"
+cmake = ">=3.26,<4"
+ninja = ">=1.11"
+pip = "*"
+unzip = "*"             # for the inspect_wheel.py / docs scripts
+jq = "*"                # for variant.json schema sanity in shell
+
+[pypi-dependencies]
+# Build backend with PEP 817 variants support. wheelnext/scikit-build-core@main
+# is stale (no variants); use the henryiii fork branch that backs PR #1284.
+scikit-build-core = { git = "https://github.com/henryiii/scikit-build-core.git", branch = "henryiii/feat/variants" }
+
+# Reference variantlib implementation (variant.json synthesis + parsing).
+variantlib = { git = "https://github.com/wheelnext/variantlib.git" }
+
+# Phase-2 tool: post-process a built wheel into a PEP-817-shaped variant wheel.
+variant-repack = { git = "https://github.com/wheelnext/variant-repack.git" }
+
+# Pilot project's only real build dep.
+pybind11 = "*"
+
+# Standard build frontend (driven by build_pilot.sh).
+build = "*"
+
+[tasks]
+build-pilot = "bash pilot/build_pilot.sh"
+inspect-pilot = "python pilot/inspect_wheel.py pilot/dist"
+repack-itk = "bash mock/repack_itk_wheel.sh"
+validate-itk = "python mock/validate_variant_wheel.py mock/fixtures"

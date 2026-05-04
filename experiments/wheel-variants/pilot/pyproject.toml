@@ -1,0 +1,20 @@
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "itk_variant_demo"
+version = "0.0.1"
+description = "Trivial pybind11 wheel used to validate scikit-build-core's PEP 817 variants implementation"
+requires-python = ">=3.11"
+authors = [{ name = "Cavan Riley", email = "cavan-riley@uiowa.edu" }]
+
+[tool.scikit-build]
+cmake.version = ">=3.16"
+cmake.build-type = "Release"
+wheel.expand-macos-universal-tags = false
+wheel.packages = ["src/itk_variant_demo"]
+build-dir = "build/{wheel_tag}"
+
+# variants are configured ONLY at build time via --config-settings
+# (see pilot/build_pilot.sh). Per PR #1284 they cannot be declared here.
