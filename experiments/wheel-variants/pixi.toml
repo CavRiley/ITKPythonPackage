@@ -11,8 +11,15 @@ python = ">=3.11,<3.13"
 cmake = ">=3.26,<4"
 ninja = ">=1.11"
 pip = "*"
-unzip = "*"             # for the inspect_wheel.py / docs scripts
-jq = "*"                # for variant.json schema sanity in shell
+# wheelnext deps at experiment time pin some core packaging tooling tightly
+# (variantlib: packaging>=25.0,<26.0; variant-repack: wheel>=0.46.2,<0.47).
+# Pin them in the conda layer so the PyPI solve can satisfy both.
+packaging = ">=25.0,<26.0"
+wheel = ">=0.46.2,<0.47"
+# Inspection / validation is done via inspect_wheel.py and
+# validate_variant_wheel.py (Python stdlib zipfile + json), so no shell
+# tools like `unzip` or `jq` are required (and they aren't on conda-forge
+# for win-64 anyway).
 
 [pypi-dependencies]
 # Build backend with PEP 817 variants support. wheelnext/scikit-build-core@main

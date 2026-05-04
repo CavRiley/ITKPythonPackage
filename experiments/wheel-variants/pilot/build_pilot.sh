@@ -20,17 +20,20 @@ mkdir -p dist
 echo "==> Variant A: TBB on (label=tbbon)"
 python -m build --wheel . \
   --outdir dist \
+  --no-isolation --skip-dependency-check \
   --config-setting=experimental=true \
   --config-setting=variant=itk::threading::tbb \
   --config-setting=variant-label=tbbon \
   --config-setting=cmake.define.ITK_VARIANT_DEMO_TBB=ON
 
 echo "==> Variant B: null-variant fallback"
+# Per the variants fork, null-variant is mutually exclusive with
+# variant-label — the "null" label is applied automatically.
 python -m build --wheel . \
   --outdir dist \
+  --no-isolation --skip-dependency-check \
   --config-setting=experimental=true \
   --config-setting=null-variant=true \
-  --config-setting=variant-label=null \
   --config-setting=cmake.define.ITK_VARIANT_DEMO_TBB=OFF
 
 echo "==> Built wheels:"
