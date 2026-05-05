@@ -38,8 +38,3 @@ build = "*"
 [tasks]
 build-pilot = "bash pilot/build_pilot.sh"
 inspect-pilot = "python pilot/inspect_wheel.py pilot/dist"
-# mock/ is retained as a reference (proves the post-process path also works)
-# but the production approach is now to emit variant wheels natively from the
-# real ITK build via the new variant-build pixi feature in the root pixi.toml.
-# See docs/findings.md for the design pivot.
-validate-pilot = "python mock/validate_variant_wheel.py pilot/dist"

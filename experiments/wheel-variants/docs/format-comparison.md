@@ -1,18 +1,12 @@
 # Format comparison — stock wheel vs PEP 817 variant wheel
 
-This figure pairs an ordinary wheel with the variant-tagged wheel produced
-by `mock/make_variant_wheel.py` (which uses the same byte shape as the
-variants fork of `scikit-build-core`'s emitter — see
-[`findings.md`](findings.md) for the cross-validation result).
-
-Both wheels here were built from the trivial `pilot/` pybind11 module on
-macOS arm64 / CPython 3.12. The "stock" column happens to be the
-`null-variant` output of the pilot — i.e. the fork's *fallback* wheel, which
-declares no variant properties — and serves as a clean baseline because
-nothing in it changes except the variant identity. A real ITK wheel
-substituted in here would behave the same way (the only ITK-specific bytes
-are inside the `.so`/`.dylib`/`.pyd` payloads, which the variant pipeline
-doesn't touch).
+This figure pairs a stock wheel with the variant-tagged wheel emitted by
+the variants-enabled scikit-build-core fork. Both were built from the
+trivial `pilot/` pybind11 module on macOS arm64 / CPython 3.12. The "stock"
+column is the `null-variant` fallback wheel — the fork's PEP-817-shaped
+"no properties" output — which serves as a clean baseline since nothing
+changes except the variant identity. A real ITK wheel would behave the
+same way (the binary `.so`/`.dylib`/`.pyd` payloads are not touched).
 
 ## 1. Filename
 
@@ -30,16 +24,18 @@ opt-out behavior PEP 817 wants for installers that are unaware of variants.
 
 ## 2. Zip listing
 
-Identical except for the size of `variant.json`. Both wheels carry the
-same payload (`_demo.cpython-312-darwin.so`, the source files, `METADATA`,
-`WHEEL`, `RECORD`, `variant.json`):
+Same set of entries; the variant differs from the stock only in
+`variant.json` (different content) and `_demo.cpython-312-darwin.so`
+(different binary because the TBB-on build defines `ITK_VARIANT_DEMO_TBB=1`).
+The `.so` files happen to be the same size in this trivial demo but their
+sha256 hashes differ — see § 4.
 
 | Path | Stock | Variant |
 |---|---:|---:|
 | `itk_variant_demo-0.0.1.dist-info/METADATA` | 236 B | 236 B |
 | `itk_variant_demo-0.0.1.dist-info/RECORD` | 602 B | 602 B |
 | `itk_variant_demo-0.0.1.dist-info/WHEEL` | 131 B | 131 B |
-| `itk_variant_demo-0.0.1.dist-info/variant.json` | **194 B** | **253 B** |
+| `itk_variant_demo-0.0.1.dist-info/variant.json` | **194 B** | **314 B** |
 | `itk_variant_demo/__init__.py` | 58 B | 58 B |
 | `itk_variant_demo/_demo.cpp` | 414 B | 414 B |
 | `itk_variant_demo/_demo.cpython-312-darwin.so` | 148 232 B | 148 232 B |
@@ -65,40 +61,31 @@ same payload (`_demo.cpython-312-darwin.so`, the source files, `METADATA`,
 
 ```json
 {
-  "$schema": "https://variants-schema.wheelnext.dev/v0.0.3.json",
-  "default-priorities": {
-    "namespace": []
-  },
-  "providers": {},
-  "variants": {
-    "tbbon": {
-      "itk": {
-        "threading": [
-          "tbb"
-        ]
-      }
+    "$schema": "https://variants-schema.wheelnext.dev/v0.0.3.json",
+    "default-priorities": {
+        "namespace": []
+    },
+    "providers": {},
+    "variants": {
+        "tbbon": {
+            "itk": {
+                "threading": [
+                    "tbb"
+                ]
+            }
+        }
     }
-  }
 }
 ```
 
-Three things to notice:
+Two things to notice:
 
-1. The `$schema` URL is **inside the file**. An older or newer installer
-   can fetch the right schema at parse time, regardless of when the wheel
-   was built. That makes `variant.json` self-describing in a way that
-   `WHEEL` is not.
-2. `variants` is a **map keyed by label**. Today each wheel only carries
-   one entry, but the structure leaves room for a future "fat" wheel that
-   carries multiple variants in one file.
-3. The two wheels above were produced by *different* implementations
-   (the fork's emitter for the stock/null wheel; this experiment's mock
-   for the tbbon wheel). They differ in JSON indentation (4-space vs
-   2-space) but parse identically through `variantlib.api.VariantsJson`.
-   PEP 817 does not (yet) mandate a canonical serialization, so this
-   particular difference is allowed but worth tracking — it means
-   byte-identical reproducibility across implementations is **not**
-   currently guaranteed.
+1. The `$schema` URL is embedded inside the file, so installers can fetch
+   the right schema for any wheel at parse time — making `variant.json`
+   self-describing in a way the `WHEEL` file is not.
+2. `variants` is a map keyed by label. Each wheel today carries one entry,
+   but the structure leaves room for a future "fat" wheel that carries
+   multiple variants in one file.
 
 ## 4. `RECORD` content
 
@@ -119,18 +106,19 @@ itk_variant_demo-0.0.1.dist-info/RECORD,,
 ```
 itk_variant_demo/__init__.py,sha256=Zvr_rr_M4S23MQOfq3nl9BcYnU37yRFpWZoFqM2HaVE,58
 itk_variant_demo/_demo.cpp,sha256=AxM0nISmp4a6az1PYGAcz4gc4HMsaMQ1wde_-HWGdGM,414
-itk_variant_demo/_demo.cpython-312-darwin.so,sha256=Zf-_02zs64mqoS7py1FHejqOJclmaZq6yb5XA8UlYd4,148232
+itk_variant_demo/_demo.cpython-312-darwin.so,sha256=5UECkwZM4e00rZUy0foH2vengw2Q1UIEfTCVRJNT7pA,148232
 itk_variant_demo-0.0.1.dist-info/METADATA,sha256=ZjwudxnjqxZdvCLCjLl1kpoJljmjLnL01_z0-QyhkRM,236
 itk_variant_demo-0.0.1.dist-info/WHEEL,sha256=owkrl7Nk171deLp5sQB_yH3crvR9P4H6K6uM5IBlTBA,131
-itk_variant_demo-0.0.1.dist-info/variant.json,sha256=_6jljnX1TMHYR3_v_D8kN1Hn4dFEWwpddE55ijlLEuo,253
+itk_variant_demo-0.0.1.dist-info/variant.json,sha256=Mp3a1VnGXCdxnE1_dTQg3L4GBLNB_NS8-W3O4ayhIdA,314
 itk_variant_demo-0.0.1.dist-info/RECORD,,
 ```
 
-The only differing line is the `variant.json` row (different hash, different
-size). Every other entry — including the binary payload `_demo.cpython-312-darwin.so`
-— is byte-identical and gets the same hash, which means the variant
-pipeline does **not** rebuild or relink the C++ artifact. It only adds
-a metadata sidecar and rewrites `RECORD` to account for it.
+Two lines differ between the variants: `variant.json` (different content +
+size) and `_demo.cpython-312-darwin.so` (different hash because
+`-DITK_VARIANT_DEMO_TBB=ON` was set for the variant build but not for the
+stock/null one). The other entries — sources, METADATA, WHEEL — are
+byte-identical. So a variant build genuinely produces a *different binary*,
+not just a metadata-tagged copy.
 
 ## 5. `WHEEL` (unchanged)
 
@@ -178,7 +166,5 @@ is the more important property.
 
 ## See also
 
-- [`findings.md`](findings.md) for what worked, what didn't, and what this
-  means for the production ITK build path.
-- The [`pilot/`](../pilot/) directory for the fork-built reference wheels.
-- The [`mock/`](../mock/) directory for the post-process tooling.
+- [`findings.md`](findings.md) — gotchas and production-build hook points.
+- [`pilot/`](../pilot/) — the fork-built reference wheels.

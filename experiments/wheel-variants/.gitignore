@@ -1,5 +1,6 @@
 # Pixi env state
 .pixi/
+pixi.lock
 
 # Pilot build artifacts
 pilot/build/

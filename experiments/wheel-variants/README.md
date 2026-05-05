@@ -1,80 +1,48 @@
 # PEP 817 wheel variants experiment
 
-Two experiment paths for evaluating
-[PEP 817 — Python Wheel Distribution Format for Variants](https://peps.python.org/pep-0817/)
-against ITKPythonPackage's wheels, on the
-[`experiment/wheel-variants`](https://github.com/CavRiley/ITKPythonPackage/tree/experiment/wheel-variants)
-branch on `cav`:
+Evaluating [PEP 817 — Python Wheel Distribution Format for Variants](https://peps.python.org/pep-0817/)
+for ITKPythonPackage. Variant axis: TBB on/off, expressed as
+`itk :: threading :: tbb` with label `tbbon` (plus a `null-variant` fallback
+for variant-unaware clients).
 
-1. **Native build (production path, primary deliverable)** — the real ITK
-   build emits PEP-817-shaped wheels directly when invoked through the new
-   `variant-build` pixi feature in the **root** `pixi.toml` and the new
-   `--wheel-variant` / `--wheel-variant-label` / `--null-variant` flags on
-   `scripts/build_wheels.py`. Opt-in only; production envs are unaffected.
-2. **Sandbox demonstrators (this directory)** — a `pilot/` pybind11 module
-   for fast end-to-end iteration, plus a `mock/` post-process tool kept as a
-   reference for the format-shape claims. Useful for thesis writeups and
-   format validation; **not** the production path.
+There are two paths in this branch:
 
-## Why
-
-ITKPythonPackage today has several "variant-shaped" build axes that force
-either separate package names (`itk-numerics`, `itk-meta`) or separate CI
-matrices (TBB on/off per platform, conda-cache vs tarball-cache, manylinux
-ABI tier, future GPU support). PEP 817 proposes a single distribution
-publishing per-variant wheels, distinguished by a `variant.json` sidecar in
-the dist-info plus a label suffix on the wheel filename.
-
-The chosen variant axis for this experiment is **TBB on/off**, expressed as
-the property `itk :: threading :: tbb` with label `tbbon` (vs a
-`null-variant` fallback wheel for clients that do not understand variants).
+1. **Native build (production path)** — the real ITK build emits PEP-817-shaped
+   wheels directly via the `variant-build` pixi feature in the root
+   `pixi.toml` and the `--wheel-variant` / `--wheel-variant-label` /
+   `--null-variant` flags on `scripts/build_wheels.py`. Opt-in only.
+2. **Sandbox pilot (this directory)** — a tiny pybind11 demonstrator
+   (`pilot/`) for ~30s iteration when the full ITK build (1–2h) is too slow.
 
 ## Toolchain
 
-The reference implementation lives in the [wheelnext GitHub
-organization](https://github.com/wheelnext):
+| Repo | Pin |
+|---|---|
+| henryiii/scikit-build-core, branch `henryiii/feat/variants` (variants-enabled fork tracking the upstream PR) | git URL |
+| wheelnext/variantlib (`variant.json` synthesis + parsing) | git URL |
 
-| Repo | Used for | Pin |
-|---|---|---|
-| `henryiii/scikit-build-core` (`henryiii/feat/variants` branch) | Build backend with variant config-settings | git URL in `pixi.toml` |
-| `wheelnext/variantlib` | `variant.json` synthesis and parsing | git URL in `pixi.toml` |
-| `wheelnext/variant-repack` | Post-process a built wheel to add variant metadata | git URL in `pixi.toml` |
-| `wheelnext/variants-schema` | Schema reference for `variant.json` | read-only reference |
-
-`wheelnext/scikit-build-core@main` is stale (last variants-related work absent;
-its `variant-hash-build-tag` branch encodes a *different* design — variant
-hash in the PEP 427 build-tag slot — so it is not interchangeable with the
-filename-label-suffix approach in PR #1284). The henryiii fork tracks the
-PR head and is the right pin for this experiment.
+`wheelnext/scikit-build-core@main` is stale and its `variant-hash-build-tag`
+branch encodes a different design (hash in PEP 427 build-tag slot rather
+than label suffix). The henryiii fork is the right pin.
 
 ## Layout
 
 ```
 experiments/wheel-variants/
-├── README.md                 # this file
-├── pixi.toml                 # sandbox env; pulls scikit-build-core + variantlib + variant-repack from forks
-├── .gitignore                # ignore .pixi/, build/, dist/
-├── pilot/                    # Phase 1: end-to-end demonstrator
-│   ├── pyproject.toml        # uses scikit_build_core.build backend
-│   ├── CMakeLists.txt        # trivial pybind11 module
-│   ├── src/itk_variant_demo/__init__.py
-│   ├── src/itk_variant_demo/_demo.cpp
-│   ├── build_pilot.sh        # runs python -m build twice with variant config-settings
-│   └── inspect_wheel.py      # dumps dist-info/variant.json + RECORD entries
-├── mock/                     # Phase 2: format-mock onto a real ITK wheel
-│   ├── repack_itk_wheel.sh   # thin wrapper around variant-repack build
-│   ├── validate_variant_wheel.py
-│   └── fixtures/
-│       └── README.md         # how to drop in a real itk-*.whl
-└── docs/                     # Phase 3
-    ├── format-comparison.md  # standard vs variant wheel, side-by-side
-    └── findings.md           # thesis-ready summary
+├── README.md
+├── pixi.toml             # sandbox env (separate from root)
+├── pilot/                # pybind11 demonstrator
+│   ├── pyproject.toml
+│   ├── CMakeLists.txt
+│   ├── src/itk_variant_demo/{__init__.py,_demo.cpp}
+│   ├── build_pilot.sh    # python -m build x2 with variant config-settings
+│   └── inspect_wheel.py  # dump dist-info/variant.json + RECORD entries
+└── docs/
+    ├── format-comparison.md
+    └── findings.md
 ```
 
-## Running — production path (real ITK build)
-
-From the **repo root**, using the `variant-build` pixi feature added to the
-root `pixi.toml`:
+## Running — production path
 
 ```sh
 # TBB-on variant. The `--` separator is required so pixi forwards the
@@ -83,45 +51,32 @@ pixi run -e variant-macosx-py311 build-itk-wheels -- \
     --wheel-variant 'itk::threading::tbb' \
     --wheel-variant-label tbbon
 
-# Null-variant fallback (PEP 817 publishers should ship one alongside)
+# Null-variant fallback
 pixi run -e variant-macosx-py311 build-itk-wheels -- --null-variant
 
-# Or via env vars (parity with ITK_PACKAGE_VERSION style — no `--` needed
-# because no extra args are passed to the script):
+# Or via env vars
 ITKPYTHONPACKAGE_WHEEL_VARIANT='itk::threading::tbb' \
 ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL=tbbon \
     pixi run -e variant-macosx-py311 build-itk-wheels
 ```
 
-> **Pixi gotcha:** `pixi run TASK --some-flag` silently drops `--some-flag`
-> when pixi can't determine whether it's a pixi flag or a task flag. Always
-> use `pixi run TASK -- --some-flag` for any task that takes flags pixi
-> doesn't know about.
+> **Pixi gotcha:** `pixi run TASK --flag` silently drops `--flag`. Use
+> `pixi run TASK -- --flag` for any flag pixi doesn't recognize.
 
-Available variant envs in the root `pixi.toml`:
-`variant-macosx-py311`, `variant-linux-py311`, `variant-manylinux228-py311`,
-`variant-windows-py311`. Default production envs (`manylinux228-py311`,
-`macosx-py311`, ...) are unaffected — they continue to use the stock
-scikit-build-core pin and never see variant config-settings.
+Available variant envs: `variant-{macosx,linux,manylinux228,windows}-py311`.
+Default envs (`manylinux228-py311`, `macosx-py311`, ...) are untouched.
 
-ITK builds are slow (1–2 hours) — the pilot below is the fast iteration loop.
-
-## Running — sandbox demonstrators
+## Running — sandbox pilot
 
 ```sh
 cd experiments/wheel-variants
-pixi install                         # local sandbox env (separate from root)
-pixi run build-pilot                 # ~30s, builds two variant-tagged pilot wheels
-pixi run inspect-pilot               # dump dist-info/variant.json + RECORD entries
-pixi run validate-pilot              # cross-check format with our validator
+pixi install
+pixi run build-pilot      # ~30s, builds two variant-tagged pilot wheels
+pixi run inspect-pilot    # dump dist-info/variant.json + RECORD entries
 ```
-
-The `mock/` directory contains the post-process repack tool used in earlier
-phases. Retained as a reference; not the production path. See
-[`docs/findings.md`](docs/findings.md) for the design pivot rationale.
 
 ## Status
 
-Reference plan: `~/.claude/plans/effervescent-sparking-hickey.md`.
+Plan: `~/.claude/plans/effervescent-sparking-hickey.md`.
 
-Upstream PR being tracked: [scikit-build/scikit-build-core#1284](https://github.com/scikit-build/scikit-build-core/pull/1284).
+Upstream PR tracked: scikit-build-core PR 1284.
