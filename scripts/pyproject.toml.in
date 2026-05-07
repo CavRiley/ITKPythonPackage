@@ -1,7 +1,7 @@
 # Generated using: @PYPROJECT_GENERATOR@
 
 [build-system]
-requires = ["scikit-build-core"]
+requires = [@PYPROJECT_BUILD_SYSTEM_REQUIRES@]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -131,3 +131,4 @@ minimum-version = "0.9.5"
 
 # The build directory. Defaults to a temporary directory, but can be set.
 build-dir = "build/{wheel_tag}"
+@PYPROJECT_VARIANT_BLOCK@

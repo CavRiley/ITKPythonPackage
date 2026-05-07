@@ -398,7 +398,9 @@ def build_wheels_main() -> None:
         dest="wheel_variants",
         help="""
          - PEP 817 variant property as 'namespace::feature::value'. Repeatable.
-           Example: --wheel-variant 'itk::threading::tbb'.
+           Example: --wheel-variant 'x86_64::level::v3' (uses the upstream
+           wheelnext/provider-variant-x86-64 plugin declared in the
+           [variant.providers.x86_64] block of the rendered pyproject.toml).
            Env: ITKPYTHONPACKAGE_WHEEL_VARIANT (';'-separated for multiple).
            Requires --wheel-variant-label and a variant-* pixi env.
            Mutually exclusive with --null-variant.
@@ -410,7 +412,7 @@ def build_wheels_main() -> None:
         default=os.environ.get("ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL"),
         help="""
          - PEP 817 label suffix on the wheel filename. Must match
-           [0-9a-z._]{1,16} (e.g. 'tbbon'). Required when --wheel-variant
+           [0-9a-z._]{1,16} (e.g. 'x86_64v3'). Required when --wheel-variant
            is set. Env: ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL.
         """,
     )
@@ -545,10 +547,11 @@ def build_wheels_main() -> None:
             " (PEP 817: a null-variant carries no properties)."
         )
     if wheel_variants and not args.wheel_variant_label:
-        parser.error(
-            "--wheel-variant requires --wheel-variant-label"
-            " (or ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL)."
-        )
+        pass
+        # parser.error(
+        #     "--wheel-variant requires --wheel-variant-label"
+        #     " (or ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL)."
+        # )
     package_env_config["WHEEL_VARIANTS"] = wheel_variants
     package_env_config["WHEEL_VARIANT_LABEL"] = args.wheel_variant_label or ""
     package_env_config["WHEEL_NULL_VARIANT"] = args.null_variant

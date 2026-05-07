@@ -164,6 +164,12 @@ scikit-build-core = { git = "https://github.com/henryiii/scikit-build-core.git",
 # Reference variantlib implementation; the fork auto-injects this as a build
 # requirement when variants are active.
 variantlib = { git = "https://github.com/wheelnext/variantlib.git" }
+# Upstream PEP 817 provider plugin for the x86_64 microarchitecture namespace
+# (feature `level` ∈ v1..v4 + extensions like avx2/aes/sse4_1). Available
+# under entry-point group `variant_plugins`. Required at build time so the
+# fork can validate properties like `x86_64::level::v3`, and at host-query
+# time for `variantlib plugins get-configs -s -n x86_64`.
+provider-variant-x86-64 = { git = "https://github.com/wheelnext/provider-variant-x86-64.git" }
 
 # Mirror of python-dev-pkgs WITHOUT the scikit-build-core conda pin
 # (>=0.11.6,<0.12.0). Pixi feature merging is intersection, so the stock

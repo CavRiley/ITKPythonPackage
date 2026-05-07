@@ -41,6 +41,14 @@ def parameter_option(key, option):
             "newline_indent": 4,
         },
         "PYPROJECT_DEPENDENCIES": {"indent": 8, "remove_line_if_empty": True},
+        # PEP 817 variant block; collapses cleanly when variants are not
+        # requested so stock pyproject.toml output is byte-identical.
+        # newline_if_set wraps the populated block in leading/trailing
+        # newlines (the engine strips whitespace from the value first).
+        "PYPROJECT_VARIANT_BLOCK": {
+            "remove_line_if_empty": True,
+            "newline_if_set": True,
+        },
     }
 
     default = PARAMETER_OPTION_DEFAULTS.get(option)
@@ -352,6 +360,36 @@ def get_wheel_dependencies(SCRIPT_DIR: str, version: str, wheel_names: list):
     return all_depends
 
 
+def _build_variant_pyproject_strings(package_env_config: dict) -> tuple[str, str]:
+    """Compute substitutions for the two PEP 817 variant placeholders.
+
+    Returns
+    -------
+    (build_system_requires, variant_block) : tuple[str, str]
+        ``build_system_requires`` is the comma-separated quoted-string list
+        for ``[build-system].requires``; defaults to ``"scikit-build-core"``
+        and gains ``provider-variant-x86-64`` when variants are active.
+        ``variant_block`` is empty when variants aren't active (paired with
+        ``remove_line_if_empty`` so the placeholder line vanishes); otherwise
+        the ``[variant.default-priorities]`` / ``[variant.providers.x86_64]``
+        block declaring the upstream wheelnext provider plugin.
+    """
+    variants = package_env_config.get("WHEEL_VARIANTS") or []
+    null_variant = bool(package_env_config.get("WHEEL_NULL_VARIANT", False))
+    if not variants and not null_variant:
+        return ('"scikit-build-core"', "")
+    build_system_requires = '"scikit-build-core", "provider-variant-x86-64"'
+    variant_block = (
+        "[variant.default-priorities]\n"
+        'namespace = ["x86_64"]\n'
+        "\n"
+        "[variant.providers.x86_64]\n"
+        'requires = ["provider-variant-x86-64"]\n'
+        'plugin-api = "provider_variant_x86_64"'
+    )
+    return (build_system_requires, variant_block)
+
+
 def build_base_pyproject_parameters(
     package_env_config: dict, SCRIPT_NAME: str, itk_package_version: str
 ):
@@ -374,6 +412,9 @@ def build_base_pyproject_parameters(
     ITK_SOURCE_README: str = os.path.join(
         package_env_config["ITK_SOURCE_DIR"], "README.md"
     )
+    build_system_requires, variant_block = _build_variant_pyproject_strings(
+        package_env_config
+    )
     return {
         "PYPROJECT_GENERATOR": f"python {SCRIPT_NAME} 'itk'",
         "PYPROJECT_NAME": r"itk",
@@ -381,6 +422,8 @@ def build_base_pyproject_parameters(
         "PYPROJECT_CMAKE_ARGS": r"",
         "PYPROJECT_PY_API": get_py_api(),
         "PYPROJECT_PLATLIB": r"true",
+        "PYPROJECT_BUILD_SYSTEM_REQUIRES": build_system_requires,
+        "PYPROJECT_VARIANT_BLOCK": variant_block,
         "ITK_SOURCE_DIR": package_env_config["ITK_SOURCE_DIR"],
         "ITK_SOURCE_README": ITK_SOURCE_README,
         "PYPROJECT_PY_MODULES": list_to_str(
