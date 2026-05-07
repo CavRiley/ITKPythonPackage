@@ -1,82 +1,76 @@
 # PEP 817 wheel variants experiment
 
 Evaluating [PEP 817 — Python Wheel Distribution Format for Variants](https://peps.python.org/pep-0817/)
-for ITKPythonPackage. Variant axis: TBB on/off, expressed as
-`itk :: threading :: tbb` with label `tbbon` (plus a `null-variant` fallback
-for variant-unaware clients).
+for ITKPythonPackage. The current variant axis is the upstream
+`x86_64::level::v{1,2,3,4}` microarchitecture namespace, backed by
+[`wheelnext/provider-variant-x86-64`](https://github.com/wheelnext/provider-variant-x86-64);
+a `null-variant` fallback wheel is also produced for variant-unaware
+clients. The earlier ad-hoc `itk::threading::tbb` axis was retired once
+the upstream provider became available.
 
-There are two paths in this branch:
+## Where the wiring lives
 
-1. **Native build (production path)** — the real ITK build emits PEP-817-shaped
-   wheels directly via the `variant-build` pixi feature in the root
-   `pixi.toml` and the `--wheel-variant` / `--wheel-variant-label` /
-   `--null-variant` flags on `scripts/build_wheels.py`. Opt-in only.
-2. **Sandbox pilot (this directory)** — a tiny pybind11 demonstrator
-   (`pilot/`) for ~30s iteration when the full ITK build (1–2h) is too slow.
-
-## Toolchain
-
-| Repo | Pin |
+| Site | Role |
 |---|---|
-| henryiii/scikit-build-core, branch `henryiii/feat/variants` (variants-enabled fork tracking the upstream PR) | git URL |
-| wheelnext/variantlib (`variant.json` synthesis + parsing) | git URL |
+| `pixi.toml` `[feature.variant-build]` | Pulls the variants-enabled scikit-build-core fork, `variantlib`, and `provider-variant-x86-64` via git pypi-deps. Used only by `variant-*` envs. |
+| `scripts/pyproject.toml.in` | Templated `[build-system].requires` and trailing `[variant.providers.x86_64]` block, gated by two new placeholders. Stock builds render byte-identical output. |
+| `scripts/pyproject_configure.py` | `_build_variant_pyproject_strings()` populates the placeholders from `package_env_config["WHEEL_VARIANTS"]`. |
+| `scripts/build_wheels.py` | CLI flags `--wheel-variant`, `--wheel-variant-label`, `--null-variant` (env-var equivalents `ITKPYTHONPACKAGE_*`). |
+| `scripts/build_python_instance_base.py` `_variant_config_settings()` | Emits the `--config-setting=variant-*` list spliced into both `python -m build` invocations. |
 
-`wheelnext/scikit-build-core@main` is stale and its `variant-hash-build-tag`
-branch encodes a different design (hash in PEP 427 build-tag slot rather
-than label suffix). The henryiii fork is the right pin.
+## Toolchain pins
+
+| Repo | Source |
+|---|---|
+| henryiii/scikit-build-core, branch `henryiii/feat/variants` | git URL (variants-enabled fork tracking PR 1284) |
+| wheelnext/variantlib | git URL |
+| wheelnext/provider-variant-x86-64 | git URL |
+
+`wheelnext/scikit-build-core@main` is stale and its
+`variant-hash-build-tag` branch encodes a different design (hash in PEP
+427 build-tag slot rather than label suffix). The henryiii fork is the
+right pin.
+
+## Reproducing the demo
+
+```sh
+ITKPYTHONPACKAGE_WHEEL_VARIANT='x86_64::level::v3' \
+ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL='x86_64v3' \
+pixi run -e variant-macosx-py311 build-itk-wheels -- \
+    --build-dir-root /path/to/scratch \
+    --platform-env variant-macosx-py311
+
+# The ITK wheels produced under dist/ carry the `-x86_64v3` label
+# suffix and a populated [variant.providers.x86_64] block in variant.json.
+
+# Null-variant fallback (no property declared)
+pixi run -e variant-macosx-py311 build-itk-wheels -- --null-variant
+```
+
+> `pixi run TASK --flag` silently drops `--flag`. Use
+> `pixi run TASK -- --flag` for any flag pixi doesn't recognize.
+
+Available variant envs: `variant-{macosx,linux,manylinux228,windows}-py311`.
+Stock envs (`manylinux228-py311`, `macosx-py311`, ...) are unaffected.
 
 ## Layout
 
 ```
 experiments/wheel-variants/
 ├── README.md
-├── pixi.toml             # sandbox env (separate from root)
-├── pilot/                # pybind11 demonstrator
-│   ├── pyproject.toml
-│   ├── CMakeLists.txt
-│   ├── src/itk_variant_demo/{__init__.py,_demo.cpp}
-│   ├── build_pilot.sh    # python -m build x2 with variant config-settings
-│   └── inspect_wheel.py  # dump dist-info/variant.json + RECORD entries
 └── docs/
-    ├── format-comparison.md
-    └── findings.md
+    ├── format-comparison.md   # stock vs variant wheel; ad-hoc vs provider-backed variant.json
+    └── findings.md            # gotchas, hook points, provider-plugin notes
 ```
 
-## Running — production path
-
-```sh
-# TBB-on variant. The `--` separator is required so pixi forwards the
-# script's flags instead of trying to parse them as its own.
-pixi run -e variant-macosx-py311 build-itk-wheels -- \
-    --wheel-variant 'itk::threading::tbb' \
-    --wheel-variant-label tbbon
-
-# Null-variant fallback
-pixi run -e variant-macosx-py311 build-itk-wheels -- --null-variant
-
-# Or via env vars
-ITKPYTHONPACKAGE_WHEEL_VARIANT='itk::threading::tbb' \
-ITKPYTHONPACKAGE_WHEEL_VARIANT_LABEL=tbbon \
-    pixi run -e variant-macosx-py311 build-itk-wheels
-```
-
-> **Pixi gotcha:** `pixi run TASK --flag` silently drops `--flag`. Use
-> `pixi run TASK -- --flag` for any flag pixi doesn't recognize.
-
-Available variant envs: `variant-{macosx,linux,manylinux228,windows}-py311`.
-Default envs (`manylinux228-py311`, `macosx-py311`, ...) are untouched.
-
-## Running — sandbox pilot
-
-```sh
-cd experiments/wheel-variants
-pixi install
-pixi run build-pilot      # ~30s, builds two variant-tagged pilot wheels
-pixi run inspect-pilot    # dump dist-info/variant.json + RECORD entries
-```
+The earlier `pilot/` pybind11 demonstrator and `mock/` post-process
+repacker were both removed once the ITK wheel build itself could prove
+the same point — see [`docs/findings.md`](docs/findings.md) for the
+phase log.
 
 ## Status
 
-Plan: `~/.claude/plans/effervescent-sparking-hickey.md`.
-
-Upstream PR tracked: scikit-build-core PR 1284.
+Upstream PR tracked: scikit-build-core PR 1284. PEP 817 itself is in
+draft. Verification on x86_64 hosts (where the provider can answer "yes,
+this level is supported") is a future step; macOS arm64 covers the
+format and plumbing exhaustively.
