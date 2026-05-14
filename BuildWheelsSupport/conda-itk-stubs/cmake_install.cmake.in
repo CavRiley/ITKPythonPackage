@@ -1,0 +1,141 @@
+# Auto-installed by ITKPythonPackage into <conda_itk_dir>/cmake_install.cmake.
+# Maps each per-module *PythonWheelRuntimeLibraries component to the
+# pre-installed Python files in the conda prefix and copies them into the
+# wheel's install tree.
+#
+# Fully version-agnostic — uses globs everywhere, never names a specific
+# ITK MAJOR.MINOR.  The single @CONDA_PREFIX@ placeholder is substituted at
+# install time by `scripts/conda_itk_stubs.py:install_stubs`.
+#
+# Platform-agnostic — globs both .so (Linux, macOS) and .pyd (Windows)
+# Python extension module suffixes, and forwards both .dylibs/ (macOS
+# delocate convention) and .libs/ / itk.libs/ (Windows delvewheel
+# convention) when the conda recipe pre-bundled the native dependencies.
+
+if(DEFINED CMAKE_INSTALL_COMPONENT AND NOT CMAKE_INSTALL_COMPONENT STREQUAL "")
+  set(_ipp_component "${CMAKE_INSTALL_COMPONENT}")
+elseif(DEFINED COMPONENT AND NOT COMPONENT STREQUAL "")
+  set(_ipp_component "${COMPONENT}")
+else()
+  return()
+endif()
+
+if(NOT _ipp_component MATCHES "PythonWheelRuntimeLibraries$")
+  return()
+endif()
+
+string(REGEX REPLACE "PythonWheelRuntimeLibraries$" "" _ipp_module "${_ipp_component}")
+
+set(_ipp_conda_prefix "@CONDA_PREFIX@")
+
+# One-time sentinel: copy shared itk package infrastructure and ITKPyBase.
+# ITKPyBase is not in ITK_MODULES_ENABLED so it never gets its own component;
+# it must be copied here unconditionally so every wheel includes it.
+set(_ipp_sentinel "${CMAKE_INSTALL_PREFIX}/itk/.conda_global_done")
+if(NOT EXISTS "${_ipp_sentinel}")
+  # itkConfig.py (top-level) — Linux/macOS use lib/python*/site-packages/,
+  # conda on Windows uses Lib/site-packages/.
+  file(GLOB _g
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itkConfig.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itkConfig.py")
+  if(_g)
+    file(INSTALL ${_g} DESTINATION "${CMAKE_INSTALL_PREFIX}" USE_SOURCE_PERMISSIONS)
+  endif()
+  file(GLOB _g
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/__init__.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/__init__.py")
+  if(_g)
+    file(INSTALL ${_g} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+  endif()
+  file(GLOB _support_dir LIST_DIRECTORIES true
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/support"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/support")
+  if(_support_dir)
+    file(INSTALL ${_support_dir} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+  endif()
+  file(GLOB _g
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/Configuration/__init__.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/Configuration/__init__.py")
+  if(_g)
+    file(INSTALL ${_g} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk/Configuration" USE_SOURCE_PERMISSIONS)
+  endif()
+  # Glob both .so (Linux/macOS) and .pyd (Windows) so the sentinel works
+  # uniformly across platforms.
+  file(GLOB _ipp_pybase_native
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/_ITKPyBasePython*.so"
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/_ITKPyBasePython*.pyd"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/_ITKPyBasePython*.pyd")
+  if(_ipp_pybase_native)
+    file(INSTALL ${_ipp_pybase_native} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+  endif()
+  file(GLOB _ipp_pybase_py
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/ITKPyBasePython.py"
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/pyBasePython.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/ITKPyBasePython.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/pyBasePython.py")
+  if(_ipp_pybase_py)
+    file(INSTALL ${_ipp_pybase_py} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+  endif()
+  file(GLOB _ipp_pybase_cfg
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/Configuration/ITKPyBaseConfig.py"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/Configuration/ITKPyBaseConfig.py")
+  if(_ipp_pybase_cfg)
+    file(INSTALL ${_ipp_pybase_cfg} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk/Configuration" USE_SOURCE_PERMISSIONS)
+  endif()
+  # Recipes that pre-bundle the native dependencies (current
+  # libitk-wrapping) ship a sibling bundle directory next to the Python
+  # extension modules in the conda env:
+  #   macOS (delocate):    lib/python*/site-packages/itk/.dylibs/
+  #   Windows (delvewheel): Lib/site-packages/itk/itk.libs/  (or itk_libs/,
+  #                         depending on the recipe's --lib-sdir choice)
+  # The native modules have linker references baked in pointing at those
+  # sibling locations, so the wheel must include the bundle for imports to
+  # succeed.  Copy each known shape once per wheel-install — pip merges
+  # the per-wheel copies into the same itk/ at install time, so the
+  # duplication is reconciled on disk.
+  file(GLOB _ipp_bundle_dirs LIST_DIRECTORIES true
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/.dylibs"
+    "${_ipp_conda_prefix}/lib/python*/site-packages/itk/.libs"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/.dylibs"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/.libs"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/itk.libs"
+    "${_ipp_conda_prefix}/Lib/site-packages/itk/itk_libs")
+  foreach(_bundle_dir IN LISTS _ipp_bundle_dirs)
+    if(IS_DIRECTORY "${_bundle_dir}")
+      file(INSTALL "${_bundle_dir}" DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+      message(STATUS "conda cmake_install: installed bundle dir from ${_bundle_dir}")
+    endif()
+  endforeach()
+  file(WRITE "${_ipp_sentinel}" "done\n")
+  message(STATUS "conda cmake_install: installed global itk package files (incl. ITKPyBase + native bundle dir)")
+endif()
+
+# Per-module native extension: .so (Linux/macOS) or .pyd (Windows).  conda
+# on Windows uses Lib/site-packages/ (capital L) per the python.org layout;
+# Linux/macOS use lib/python*/site-packages/.  Glob both shapes.
+file(GLOB _native
+  "${_ipp_conda_prefix}/lib/python*/site-packages/itk/_${_ipp_module}Python*.so"
+  "${_ipp_conda_prefix}/lib/python*/site-packages/itk/_${_ipp_module}Python*.pyd"
+  "${_ipp_conda_prefix}/Lib/site-packages/itk/_${_ipp_module}Python*.pyd")
+if(_native)
+  file(INSTALL ${_native} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+endif()
+
+file(GLOB _py
+  "${_ipp_conda_prefix}/lib/python*/site-packages/itk/${_ipp_module}Python.py"
+  "${_ipp_conda_prefix}/Lib/site-packages/itk/${_ipp_module}Python.py")
+if(_py)
+  file(INSTALL ${_py} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk" USE_SOURCE_PERMISSIONS)
+endif()
+
+file(GLOB _cfg
+  "${_ipp_conda_prefix}/lib/python*/site-packages/itk/Configuration/${_ipp_module}Config.py"
+  "${_ipp_conda_prefix}/lib/python*/site-packages/itk/Configuration/${_ipp_module}_snake_case.py"
+  "${_ipp_conda_prefix}/Lib/site-packages/itk/Configuration/${_ipp_module}Config.py"
+  "${_ipp_conda_prefix}/Lib/site-packages/itk/Configuration/${_ipp_module}_snake_case.py")
+if(_cfg)
+  file(INSTALL ${_cfg} DESTINATION "${CMAKE_INSTALL_PREFIX}/itk/Configuration" USE_SOURCE_PERMISSIONS)
+endif()
+
+list(LENGTH _native _n)
+message(STATUS "conda cmake_install: ${_ipp_component}: ${_n} native file(s) installed")

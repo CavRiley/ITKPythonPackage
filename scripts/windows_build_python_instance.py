@@ -1,4 +1,5 @@
 import re
+import zipfile
 from pathlib import Path
 
 from build_python_instance_base import BuildPythonInstanceBase
@@ -9,6 +10,25 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
 
     Handles Windows path conventions, pixi-based Python environment
     discovery, and ``delvewheel`` for wheel repair.
+
+    Three regimes for ``post_build_fixup`` parallel to the macOS class:
+
+    * **Conda cache, pre-bundled** (recipe ran ``delvewheel repair`` in
+      place inside the conda env): the wheel already ships an
+      ``itk/.libs/`` (or ``itk/itk.libs/`` / ``itk/itk_libs/``) sibling
+      next to the ``.pyd`` files, with their import tables pointing at
+      the bundle.  Re-running ``delvewheel`` would either duplicate the
+      payload or fail — those wheels are skipped here.
+    * **Conda cache, not pre-bundled**: ``.pyd`` files reference bare
+      DLL names like ``ITKCommon-5.4.dll``.  ``delvewheel repair`` is
+      run with ``--add-path <conda_prefix>/Library/bin`` so the DLLs
+      get bundled into the wheel.
+    * **From-source (legacy tarball cache)**: ``delvewheel`` is run with
+      the in-build oneTBB ``bin/`` directory (the previous behavior).
+
+    Wheels with no ``.pyd`` files at all (the meta wheel, or any empty
+    per-group wheel) are skipped — ``delvewheel`` requires at least one
+    native binary to process.
     """
 
     def prepare_build_env(self) -> None:
@@ -39,16 +59,83 @@ class WindowsBuildPythonInstance(BuildPythonInstanceBase):
         # self.cmake_compiler_configurations.set("CMAKE_C_FLAGS:STRING", "-O3 -DNDEBUG")
 
     def post_build_fixup(self) -> None:
-        """Repair wheels with ``delvewheel``, including oneTBB library paths."""
-        # append the oneTBB-prefix\\bin directory for fixing wheels built with local oneTBB
-        search_lib_paths = (
-            [s for s in str(self.windows_extra_lib_paths[0]).rstrip(";") if s]
-            if self.windows_extra_lib_paths
-            else []
-        )
-        search_lib_paths.append(str(self.build_dir_root / "oneTBB-prefix" / "bin"))
-        search_lib_paths_str: str = ";".join(map(str, search_lib_paths))
-        self.fixup_wheels(search_lib_paths_str)
+        """Repair wheels with ``delvewheel``, with conda-cache branches.
+
+        See the class docstring for the three regimes.  All wheels are
+        scanned individually; empty meta wheels and wheels that already
+        carry a recipe-bundled ``.libs/`` directory are skipped before
+        ``delvewheel`` runs.
+        """
+        conda_itk_dir = getattr(self, "_conda_itk_dir", None)
+        if conda_itk_dir is not None:
+            # Conda cache: assemble lib paths from any caller-provided
+            # extra lib paths plus the conda env's Library/bin/ where
+            # DLLs live (mirror to <prefix>/lib/python*/site-packages/itk
+            # is also possible but Library/bin is the canonical Windows
+            # conda layout).
+            search_lib_paths = (
+                [
+                    s
+                    for s in str(self.windows_extra_lib_paths[0]).rstrip(";").split(";")
+                    if s
+                ]
+                if self.windows_extra_lib_paths
+                else []
+            )
+            conda_prefix = conda_itk_dir.parents[2]  # lib/cmake/ITK-x.y -> prefix
+            search_lib_paths.append(str(conda_prefix / "Library" / "bin"))
+            search_lib_paths_str: str = ";".join(map(str, search_lib_paths))
+            for wheel in sorted((self.build_dir_root / "dist").glob("itk_*.whl")):
+                if not self._wheel_has_pyd(wheel):
+                    print(f"Skipping fixup of {wheel.name}: no .pyd files inside")
+                    continue
+                if self._wheel_has_predelocated_libs(wheel):
+                    print(
+                        f"Skipping delvewheel of {wheel.name}: wheel already "
+                        "contains a recipe-bundled .libs/ directory"
+                    )
+                    continue
+                self.fixup_wheel(str(wheel), lib_paths=search_lib_paths_str)
+        else:
+            # From-source path: append the oneTBB-prefix\\bin directory for
+            # fixing wheels built with local oneTBB
+            search_lib_paths = (
+                [s for s in str(self.windows_extra_lib_paths[0]).rstrip(";") if s]
+                if self.windows_extra_lib_paths
+                else []
+            )
+            search_lib_paths.append(str(self.build_dir_root / "oneTBB-prefix" / "bin"))
+            search_lib_paths_str = ";".join(map(str, search_lib_paths))
+            self.fixup_wheels(search_lib_paths_str)
+
+    @staticmethod
+    def _wheel_has_pyd(wheel_path: Path) -> bool:
+        """Return True if the wheel contains at least one ``.pyd`` file.
+
+        Used to skip post-build fixup on empty meta wheels —
+        ``delvewheel`` requires at least one native binary to process.
+        """
+        with zipfile.ZipFile(wheel_path) as zf:
+            return any(name.endswith(".pyd") for name in zf.namelist())
+
+    @staticmethod
+    def _wheel_has_predelocated_libs(wheel_path: Path) -> bool:
+        """Return True if the wheel ships a recipe-bundled ``.libs/`` dir.
+
+        Modern ``libitk-wrapping`` conda recipes may pre-bundle DLLs by
+        running ``delvewheel repair`` in-place inside the conda env.
+        The resulting bundle directory is then forwarded into each
+        wheel by the cmake_install.cmake shim.  Re-running
+        ``delvewheel`` on such a wheel either duplicates the payload or
+        fails outright because the import tables already point at the
+        bundle.
+
+        Recognises every shape we've seen in the wild:
+        ``itk/.libs/``, ``itk/itk.libs/``, ``itk/itk_libs/``.
+        """
+        prefixes = ("itk/.libs/", "itk/itk.libs/", "itk/itk_libs/")
+        with zipfile.ZipFile(wheel_path) as zf:
+            return any(name.startswith(prefixes) for name in zf.namelist())
 
     def fixup_wheel(
         self, filepath, lib_paths: str = "", remote_module_wheel: bool = False

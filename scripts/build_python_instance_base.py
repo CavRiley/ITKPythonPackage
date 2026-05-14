@@ -11,6 +11,7 @@ from pathlib import Path
 
 from BuildManager import BuildManager
 from cmake_argument_builder import CMakeArgumentBuilder
+from conda_itk_stubs import install_stubs as install_conda_itk_stubs
 from pyproject_configure import configure_one_pyproject_file
 from wheel_builder_utils import (
     _remove_tree,
@@ -234,6 +235,25 @@ class BuildPythonInstanceBase(ABC):
                         return candidate
         return None
 
+    def _generate_conda_itk_stub_cmake_configs(
+        self, conda_prefix: Path, conda_itk_dir: Path, itk_source_dir: Path
+    ) -> Path:
+        """Install the CMake stubs needed to consume a conda-supplied ITK.
+
+        Thin delegate to :func:`conda_itk_stubs.install_stubs`; the actual
+        CMake content lives in ``BuildWheelsSupport/conda-itk-stubs/`` as
+        standalone ``.cmake`` / ``.cmake.in`` files so it can be reviewed
+        with proper syntax highlighting instead of as inline Python strings.
+
+        Returns the directory to add to ``CMAKE_MODULE_PATH``.
+        """
+        return install_conda_itk_stubs(
+            conda_prefix=conda_prefix,
+            conda_itk_dir=conda_itk_dir,
+            itk_source_dir=itk_source_dir,
+            build_dir_root=self.build_dir_root,
+        )
+
     def run(self) -> None:
         """Run the full build flow for this Python instance."""
         # Use BuildManager to persist and resume build steps
@@ -242,8 +262,11 @@ class BuildPythonInstanceBase(ABC):
         if self.itk_module_deps:
             self._build_module_dependencies()
 
-        # Check for conda/pixi-provided ITK (libitk-wrapping package)
-        conda_itk_dir = self._detect_conda_itk()
+        # Check for conda/pixi-provided ITK (libitk-wrapping package).
+        # Cache the result so other methods (post-build fixup, cleanup) can
+        # branch on it cheaply via self._conda_itk_dir.
+        self._conda_itk_dir = self._detect_conda_itk()
+        conda_itk_dir = self._conda_itk_dir
         if conda_itk_dir is not None:
             # Point the build at the pre-installed ITK — skip compilation
             self.cmake_itk_source_build_configurations.set(
@@ -253,9 +276,92 @@ class BuildPythonInstanceBase(ABC):
             self.cmake_itk_source_build_configurations.set(
                 "ITK_BINARY_DIR:PATH", str(conda_itk_dir)
             )
-            print(
-                "Using conda-installed ITK; skipping superbuild and C++ build steps."
+            # Add the conda prefix to CMAKE_PREFIX_PATH so ITKConfig.cmake's
+            # transitive find_package() calls (double-conversion, expat, etc.)
+            # resolve from the conda env instead of needing the SuperBuild.
+            conda_prefix = conda_itk_dir.parents[2]  # lib/cmake/ITK-x.y -> prefix
+            self.cmake_itk_source_build_configurations.set(
+                "CMAKE_PREFIX_PATH:PATH", str(conda_prefix)
             )
+            # Point ITK_SOURCE_DIR at the conda env's include tree.
+            # cmake/ITKPythonPackage_BuildWheels.cmake:86-116 walks
+            # ${ITK_SOURCE_DIR}/Modules/<Group>/itk-module.cmake to derive
+            # per-module GROUP info from the directory layout, which is then
+            # used to dispatch install components per wheel.  conda-forge's
+            # libitk-feedstock ships those files under
+            # <prefix>/include/ITK-<MAJOR.MINOR>/Modules/; using that path
+            # in place of the empty placeholder is what makes the per-wheel
+            # install dispatch fire for non-Core wheels.  Discover the
+            # MAJOR.MINOR from the conda_itk_dir basename so we stay
+            # version-agnostic.
+            itk_version_suffix = conda_itk_dir.name.removeprefix("ITK-")
+            conda_itk_source_dir = (
+                conda_prefix / "include" / f"ITK-{itk_version_suffix}"
+            )
+            if (conda_itk_source_dir / "Modules").is_dir():
+                self.cmake_itk_source_build_configurations.set(
+                    "ITK_SOURCE_DIR:PATH", str(conda_itk_source_dir)
+                )
+                # Also update package_env_config so pyproject_configure.py's
+                # per-wheel pyproject.toml generation (which emits a second
+                # `-DITK_SOURCE_DIR=...` on the cmake command line) agrees
+                # with the redirect.  Without this the late definition wins
+                # in CMake's left-to-right cmdline processing and clobbers
+                # the redirect back to the empty placeholder.
+                self.package_env_config["ITK_SOURCE_DIR"] = conda_itk_source_dir
+                # pyproject.toml.in templates `readme = ${ITK_SOURCE_DIR}/README.md`.
+                # Once we redirect to the conda include tree, the same
+                # placeholder we wrote at args.itk_source_dir in build_wheels.py
+                # is no longer at the path scikit-build-core looks for.
+                # Materialise an equivalent placeholder under the new location
+                # so the pyproject-metadata reader does not raise
+                # ConfigurationError("Readme file not found ...").
+                conda_readme = conda_itk_source_dir / "README.md"
+                if not conda_readme.exists():
+                    try:
+                        conda_readme.write_text(
+                            "# ITK (conda-cache placeholder)\n\n"
+                            "Placeholder written by ITKPythonPackage when the "
+                            "wheel build consumes a conda-supplied ITK.  The "
+                            "real ITK readme ships with the ITK GitHub "
+                            "repository; this file exists only so "
+                            "pyproject.toml's `readme = ITK/README.md` "
+                            "directive resolves.\n"
+                        )
+                    except OSError as exc:
+                        print(
+                            f"WARNING: could not write README placeholder at "
+                            f"{conda_readme}: {exc}.  Per-wheel build steps "
+                            "may fail with 'Readme file not found'."
+                        )
+                print(
+                    f"Redirected ITK_SOURCE_DIR to conda include tree at "
+                    f"{conda_itk_source_dir}"
+                )
+            else:
+                print(
+                    f"WARNING: expected conda Modules/ layout at "
+                    f"{conda_itk_source_dir}/Modules — keeping ITK_SOURCE_DIR "
+                    "unchanged.  Non-Core wheels will be empty until the "
+                    "libitk-wrapping conda package ships the itk-module.cmake "
+                    "files (see .devlocal/conda-recipe-group-fix-brief.md)."
+                )
+            # Generate stub cmake configs for dependencies whose conda-forge
+            # packaging differs from what ITKConfig.cmake expects (e.g. the
+            # lowercase hdf5:: targets) plus a regenerated cmake_install.cmake
+            # shim that installs ITKPyBase and other shared Python files.
+            itk_source_dir = Path(
+                self.cmake_itk_source_build_configurations.get(
+                    "ITK_SOURCE_DIR:PATH", ""
+                )
+            )
+            stub_find_dir = self._generate_conda_itk_stub_cmake_configs(
+                conda_prefix, conda_itk_dir, itk_source_dir
+            )
+            self.cmake_itk_source_build_configurations.set(
+                "CMAKE_MODULE_PATH:PATH", str(stub_find_dir)
+            )
+            print("Using conda-installed ITK; skipping superbuild and C++ build steps.")
 
         python_package_build_steps: OrderedDict[str, Callable] = OrderedDict(
             {
@@ -787,9 +893,7 @@ class BuildPythonInstanceBase(ABC):
             pyproject_data = tomllib.load(f)
 
         # --- Strategy 3: module declares dynamic dependencies -----------------
-        dynamic_fields = (
-            pyproject_data.get("project", {}).get("dynamic", [])
-        )
+        dynamic_fields = pyproject_data.get("project", {}).get("dynamic", [])
         if "dependencies" in dynamic_fields:
             # The module has opted into dynamic dependency resolution.
             # Set ITK_PACKAGE_VERSION in the environment so the
@@ -798,7 +902,7 @@ class BuildPythonInstanceBase(ABC):
             os.environ["ITK_PACKAGE_VERSION"] = itk_version
             print(
                 f"Strategy 3: {pyproject_path.name} declares "
-                f"dynamic=[\"dependencies\"]; set ITK_PACKAGE_VERSION="
+                f'dynamic=["dependencies"]; set ITK_PACKAGE_VERSION='
                 f"{itk_version} for metadata provider"
             )
             return False  # no file modification needed
@@ -819,9 +923,7 @@ class BuildPythonInstanceBase(ABC):
             "itk-segmentation",
         )
         _base_pkg_alt = "|".join(re.escape(p) for p in _ITK_BASE_PACKAGES)
-        pattern = re.compile(
-            rf'"({_base_pkg_alt})\s*==\s*[\d]+\.[\d]+\.\*"'
-        )
+        pattern = re.compile(rf'"({_base_pkg_alt})\s*==\s*[\d]+\.[\d]+\.\*"')
 
         # Warn about pinned remote-module cross-deps that may also need
         # attention but should not be auto-rewritten.
@@ -849,6 +951,7 @@ class BuildPythonInstanceBase(ABC):
             min_floor = itk_version
 
         changed = False
+
         def _replace(m: re.Match) -> str:
             nonlocal changed
             changed = True
@@ -881,9 +984,7 @@ class BuildPythonInstanceBase(ABC):
             itk_ver = self.package_env_config.get("ITK_PACKAGE_VERSION", "")
             if itk_ver:
                 shutil.copy2(module_pyproject, pyproject_orig)
-                deps_rewritten = self._update_module_itk_deps(
-                    module_pyproject, itk_ver
-                )
+                deps_rewritten = self._update_module_itk_deps(module_pyproject, itk_ver)
 
         # Ensure venv tools are first in PATH
         py_exe = str(self.package_env_config["PYTHON_EXECUTABLE"])  # Python3_EXECUTABLE
@@ -1058,8 +1159,11 @@ class BuildPythonInstanceBase(ABC):
             cmd += [wheel_configbuild_dir_root]
             self.echo_check_call(cmd)
 
-            # Remove unnecessary files for building against ITK
-            if self.cleanup:
+            # Remove unnecessary files for building against ITK.  Skip when
+            # ITK_BINARY_DIR points into a conda prefix — there are no
+            # intermediate .cpp/.obj files there to clean and we must not
+            # touch conda-managed install files.
+            if self.cleanup and getattr(self, "_conda_itk_dir", None) is None:
                 bp = Path(
                     self.cmake_itk_source_build_configurations["ITK_BINARY_DIR:PATH"]
                 )

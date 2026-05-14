@@ -17,7 +17,10 @@ authors = [
 
 name = "ITKPythonPackage"
 version = "0.1.0"
-channels = ["conda-forge"]
+# `file:///Users/cavriley/local-channel` hosts a developer-built `libitk` /
+# `libitk-devel` / `libitk-wrapping` for osx-arm64 used by the
+# `macosx-conda-py312` environment.  conda-forge remains the primary channel.
+channels = ["file:///Users/cavriley/local-channel", "conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 ########################################
@@ -123,10 +126,10 @@ python = ">=3.10,<3.11"
 [feature.py311.dependencies]
 python = ">=3.11,<3.12"
 
-#[feature.py312]
-#[feature.py312.dependencies]
-#python = ">=3.12,<3.13"
-#
+[feature.py312]
+[feature.py312.dependencies]
+python = ">=3.12,<3.13"
+
 #[feature.py313]
 #[feature.py313.dependencies]
 #python = ">=3.13,<3.14"
@@ -134,6 +137,42 @@ python = ">=3.11,<3.12"
 #[feature.py314]
 #[feature.py314.dependencies]
 #python = ">=3.14,<3.15"
+
+########################################
+# Conda-supplied ITK cache (libitk-wrapping)
+########################################
+# When this feature is layered into an environment, the build system detects
+# `$CONDA_PREFIX/lib/cmake/ITK-*/ITKConfig.cmake` via _detect_conda_itk() and
+# skips the superbuild + ITK C++ wrapping steps entirely.  Currently wired up
+# only for osx-arm64; the packages are produced by the rattler-build recipe
+# at `packages/libitk-wrapping/`.
+[feature.conda-itk-cache]
+# osx-arm64 is the actively-tested platform; win-64 is wired up but
+# requires a Windows-built libitk-wrapping conda package to be present
+# in a channel.  Until that exists, the `windows-conda-py312` env will
+# simply fail to solve, which is the expected friendly failure mode.
+platforms = ["osx-arm64", "win-64"]
+# `libitk` 6.0.0 in ~/local-channel was built against macOS 11.0+
+# (`__osx >=11.0`), so the env that consumes it must declare a
+# matching system requirement.  The looser 10.7 floor from
+# `macosx-build` is fine for the from-source path; the conda-cache
+# path bumps it.  Windows has no equivalent constraint here.
+system-requirements = { macos = "11.0" }
+
+[feature.conda-itk-cache.dependencies]
+# Accept any ITK series from 5.4 onward.  The wheel-build Python code
+# globs ``lib/cmake/ITK-*`` for the cmake config directory and never
+# refers to a specific MAJOR.MINOR.  An older local-channel that only
+# carries ITK 5.4.x will still resolve; a newer one with ITK 6.x or
+# 7.x will pick that up automatically.
+libitk = ">=5.4,<8"
+libitk-devel = ">=5.4,<8"
+# Both runtime and -devel of libitk-wrapping are needed: the runtime
+# package ships the Python ``.so`` modules and ITKConfig.cmake;
+# the -devel package ships the CMake targets and headers that the
+# wheel-time ``find_package(ITK REQUIRED)`` consumes.
+libitk-wrapping = ">=5.4,<8"
+libitk-wrapping-devel = ">=5.4,<8"
 
 ########################################
 # Publishing feature (no compilers needed)
@@ -177,6 +216,37 @@ manylinux228-py311 = [
 # macOS build env (both Intel and Apple Silicon)
 macosx-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
 macosx-py311 = ["py311", "build-dev-tools", "python-dev-pkgs", "macosx-build"]
+
+# macOS arm64 env that consumes the libitk-wrapping conda cache.
+# Pulls libitk/libitk-devel/libitk-wrapping from the local-channel listed above.
+macosx-conda-py312 = [
+  "py312",
+  "build-dev-tools",
+  "python-dev-pkgs",
+  "macosx-build",
+  "conda-itk-cache",
+]
+
+# Windows env that consumes the libitk-wrapping conda cache is intentionally
+# NOT defined here.  pixi validates every env in the workspace on every
+# operation, and an env with unsatisfiable dependencies breaks the whole
+# workspace — including unrelated `pixi run -e macosx-conda-py312`.  Until
+# a win-64 build of libitk-wrapping is published to a reachable channel,
+# defining the env would poison the workspace for everyone.
+#
+# To enable Windows conda-cache builds once such a package exists, add:
+#
+#   windows-conda-py312 = [
+#     "py312",
+#     "build-dev-tools",
+#     "python-dev-pkgs",
+#     "windows-build",
+#     "conda-itk-cache",
+#   ]
+#
+# The IPP-side support is already wired up in
+# scripts/windows_build_python_instance.py and the cmake_install.cmake.in
+# shim — both handle .pyd files and .libs/ bundle forwarding.
 
 # Windows build env
 windows-py310 = ["py310", "build-dev-tools", "python-dev-pkgs", "windows-build"]
