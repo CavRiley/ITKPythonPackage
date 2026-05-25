@@ -188,11 +188,22 @@ twine = ">=6.0"
 
 
 ########################################
+# cibuildwheel feature (remote-module wheel builds)
+########################################
+[feature.cibuildwheel.dependencies]
+zstd = "*"
+
+[feature.cibuildwheel.pypi-dependencies]
+cibuildwheel = ">=3.0"
+
+
+########################################
 # Environments: compose features per target
 ########################################
 
 [environments]
 publish = ["publish"]
+cibuildwheel = ["cibuildwheel"]
 linux-py310 = ["py310", "linux-build", "build-dev-tools", "python-dev-pkgs"]
 linux-py311 = ["py311", "linux-build", "build-dev-tools", "python-dev-pkgs"]
 
